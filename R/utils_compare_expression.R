@@ -1,12 +1,18 @@
-merge_expr_tbs <- function(x, y) {
-  list(
-    expr = dplyr::left_join(
-      x$expr,
-      y$expr,
-      by = join_by(gene_id)
-    ),
-    meta = dplyr::bind_rows(x$meta, y$meta)
-  )
+merge_expr_tbs <- function(tb_list) {
+  if (length(tb_list) > 1) {
+    purrr::reduce(tb_list, \(x, y) {
+      list(
+        expr = dplyr::left_join(
+          x$expr,
+          y$expr,
+          by = dplyr::join_by(gene_id)
+        ),
+        meta = dplyr::bind_rows(x$meta, y$meta)
+      )
+    })
+  } else {
+    tb_list[[1]]
+  }
 }
 
 
@@ -29,14 +35,16 @@ read_expression_spec <- function(file, convert_names_to = "symbol") {
       )
     )
     checkmate::assert_file_exists(spec$counts)
-    tb <- ifelse(
-      stringr::str_ends(spec$counts, "csv"),
-      readr::read_csv(spec$counts),
-      readr::read_tsv(spec$counts)
-    )
-    gene_col <- spec$gene_name_format %||% "gene_id"
-    cohort <- spec$gene_name_format %||% "unassigned"
-    pointblank::col_exists(tb, id)
+    if (stringr::str_ends(spec$counts, "csv")) {
+      tb <- readr::read_csv(spec$counts)
+    } else {
+      tb <- readr::read_tsv(spec$counts)
+    }
+    gene_col <- spec$gene_col %||% "gene_id"
+    gene_name_format <- spec$gene_name_format %||% "ensembl"
+    cohort <- spec$cohort %||% "unassigned"
+    pointblank::col_exists(tb, gene_col)
+    tb <- dplyr::rename(tb, gene_id = gene_col)
     samples <- colnames(tb) |> purrr::discard(\(x) x == gene_col)
     meta <- tibble::tibble(
       samples = samples,
@@ -49,10 +57,10 @@ read_expression_spec <- function(file, convert_names_to = "symbol") {
 
   lapply(names(all_spec), \(tumor_type) {
     tt_list <- all_spec[[tumor_type]]
-    result <- lapply(tt_list, \(t) read_helper(t, ttype = tumor_type)) |>
-      purrr::reduce(merge_expr_tbs)
+    lapply(tt_list, \(t) read_helper(t, ttype = tumor_type)) |>
+      merge_expr_tbs()
   }) |>
-    purrr::reduce(merge_expr_tbs)
+    merge_expr_tbs()
 }
 
 read_all_expr <- function() {
@@ -65,5 +73,5 @@ read_all_expr <- function() {
     list.files(dir, pattern = ".yml|yaml$"),
     \(f) read_expression_spec(f, convert_names_to)
   ) |>
-    purrr::reduce(merge_expr_tbs)
+    merge_expr_tbs()
 }
