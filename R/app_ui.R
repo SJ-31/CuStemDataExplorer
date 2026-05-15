@@ -13,14 +13,8 @@ app_ui <- function(request) {
       mod_clinical_ui("clinical_1"),
       mod_metadata_ui("metadata_1"),
       mod_samples_ui("samples_1"),
+      mod_compare_expression_ui("compare_expression_1"),
       theme = bslib::bs_theme(bootswatch = "flatly"),
-      ## sidebar = sidebar(
-      ##   h3("Filters"),
-      ##   filter_checkbox("modality", "Modality", D$all, ~Modality),
-      ##   filter_select("cohort", "Cohort", D$all, ~Cohort),
-      ##   filter_checkbox("ttype", "Tumor Type", D$all, ~`Tumor Type`),
-      ##   csv_download_button("mtab")
-      ## )
     )
   )
 }

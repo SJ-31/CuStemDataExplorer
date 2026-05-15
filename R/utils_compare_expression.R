@@ -1,8 +1,6 @@
-box::use(
-  ggplot2[aes, theme, element_blank, geom_tile],
-  paletteer[scale_color_paletteer_c, scale_fill_paletteer_d],
-  dplyr[filter]
-)
+# [2026-05-15 Fri] BUG: there seems to be an issue with the %||% operator
+# you need to figure out how to correctly import it for use with golem
+# read up on the docs
 
 merge_expr_tbs <- function(tb_list) {
   if (length(tb_list) > 1) {
@@ -51,11 +49,11 @@ read_expression_spec <- function(file, convert_names_to = "symbol") {
     cohort <- spec$cohort %||% "unassigned"
     pointblank::col_exists(tb, gene_col)
     tb <- dplyr::rename(tb, gene_id = gene_col)
-    tb$gene_id <- recode_genes(
-      tb$gene_id,
-      to = convert_names_to,
-      from = gene_name_format
-    )
+    ## tb$gene_id <- recode_genes(
+    ##   tb$gene_id,
+    ##   to = convert_names_to,
+    ##   from = gene_name_format
+    ## )
     samples <- colnames(tb) |> purrr::discard(\(x) x == gene_col)
     meta <- tibble::tibble(
       sample = samples,
@@ -74,18 +72,16 @@ read_expression_spec <- function(file, convert_names_to = "symbol") {
     merge_expr_tbs()
 }
 
-read_all_expr <- function() {
-  dir <- get_golem_config("expression_viewer")$spec_directory
+read_all_expr <- function(cfg) {
+  dir <- cfg$spec_directory
   checkmate::assert_directory_exists(dir)
-  convert_names_to <- get_golem_config("expression_viewer")$name_format %||%
-    "symbol"
+  convert_names_to <- cfg$name_format %||% "symbol"
 
   combined <- lapply(
-    list.files(dir, pattern = ".yml|yaml$"),
+    list.files(dir, pattern = ".yml|yaml$", full.names = TRUE),
     \(f) read_expression_spec(f, convert_names_to)
   ) |>
     merge_expr_tbs()
-  # TODO: combine into tidySummarizedExperiment
 }
 
 #' Helper function to remove samples from expr_tbs
@@ -117,6 +113,12 @@ do_heatmap <- function(
   tumor_types = NULL,
   cohorts = NULL
 ) {
+  box::use(
+    ggplot2[aes, theme, element_blank, geom_tile],
+    paletteer[scale_color_paletteer_c, scale_fill_paletteer_d],
+    dplyr[filter]
+  )
+
   long <- expr_tbs$expr |>
     filter(gene_id %in% genes) |>
     tidyr::pivot_longer(-gene_id, names_to = "sample") |>
@@ -142,17 +144,18 @@ do_heatmap <- function(
   )
   bot_theming <- theme(
     axis.text.x = ggplot2::element_text(angle = 90),
-    axis.title.x = ggplot2::element_text(size = 20)
+    axis.title.x = ggplot2::element_text(size = 15)
   )
 
   expr_plot <- ggplot2::ggplot(
     long,
     aes(x = sample, y = gene_id, fill = value)
   ) +
-    geom_tile() +
+    geom_tile(width = 0.90) +
     theme(panel.grid = element_blank()) +
     scale_fill_paletteer_c(expr_palette) +
-    ggplot2::guides(fill = ggplot2::guide_legend("Normalized expression"))
+    ggplot2::guides(fill = ggplot2::guide_legend("Normalized expression")) +
+    ggplot2::ylab("Gene")
 
   if (n_cohorts == 1 && n_tumor_types == 1) {
     return(expr_plot + bot_theming + ggplot2::xlab("Sample"))
@@ -202,16 +205,3 @@ do_heatmap <- function(
     )
   }
 }
-
-do_heatmap(
-  expr,
-  genes = c(
-    "ENSG00000157916",
-    "ENSG00000298169",
-    "ENSG00000146463",
-    "ENSG00000180758",
-    "ENSG00000184677",
-    "ENSG00000158006"
-  ),
-  cfg = list()
-)
