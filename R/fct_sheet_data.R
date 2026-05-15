@@ -71,3 +71,12 @@ get_sheets <- function() {
     crosstalk::SharedData$new(group = "tables")
   data
 }
+
+
+SHEETS <- get_sheets()
+SHEET_SIDEBAR <- bslib::sidebar(
+  shiny::h3("Filters"),
+  crosstalk::filter_checkbox("modality", "Modality", SHEETS$all, ~Modality),
+  crosstalk::filter_select("cohort", "Cohort", SHEETS$all, ~Cohort),
+  crosstalk::filter_checkbox("ttype", "Tumor Type", SHEETS$all, ~`Tumor Type`),
+)

@@ -11,7 +11,10 @@ mod_metadata_ui <- function(id) {
   ns <- NS(id)
   bslib::nav_panel(
     "Metadata",
-    reactable::reactableOutput(ns("meta_tab"))
+    bslib::layout_sidebar(
+      reactable::reactableOutput(ns("meta_tab")),
+      sidebar = SHEET_SIDEBAR
+    ),
   )
 }
 

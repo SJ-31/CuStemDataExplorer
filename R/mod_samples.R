@@ -11,7 +11,10 @@ mod_samples_ui <- function(id) {
   ns <- NS(id)
   bslib::nav_panel(
     "Catalog",
-    reactable::reactableOutput(ns("sample_tab"))
+    bslib::layout_sidebar(
+      reactable::reactableOutput(ns("sample_tab")),
+      sidebar = SHEET_SIDEBAR
+    )
   )
 }
 
