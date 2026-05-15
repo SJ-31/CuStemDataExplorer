@@ -9,8 +9,9 @@
 #' @importFrom shiny NS tagList
 mod_metadata_ui <- function(id) {
   ns <- NS(id)
-  tagList(
-    bslib::nav_panel("Metadata", reactable::reactableOutput("meta_tab")),
+  bslib::nav_panel(
+    "Metadata",
+    reactable::reactableOutput(ns("meta_tab"))
   )
 }
 
@@ -37,7 +38,7 @@ mod_metadata_server <- function(id, sheet_data) {
         )
       )
     )
-    output$metatab <- reactable::renderReactable(meta_tab)
+    output$meta_tab <- reactable::renderReactable(meta_tab)
   })
 }
 

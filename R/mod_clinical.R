@@ -9,9 +9,7 @@
 #' @importFrom shiny NS tagList
 mod_clinical_ui <- function(id) {
   ns <- NS(id)
-  tagList(
-    bslib::nav_panel(ns("Clinical"), reactable::reactableOutput(ns("clin_tab")))
-  )
+  bslib::nav_panel("Clinical", reactable::reactableOutput(ns("clin_tab")))
 }
 
 #' clinical Server Functions

@@ -9,11 +9,9 @@
 #' @importFrom shiny NS tagList
 mod_samples_ui <- function(id) {
   ns <- NS(id)
-  tagList(
-    bslib::nav_panel(
-      "Catalog",
-      reactable::reactableOutput("mtab")
-    )
+  bslib::nav_panel(
+    "Catalog",
+    reactable::reactableOutput(ns("sample_tab"))
   )
 }
 
