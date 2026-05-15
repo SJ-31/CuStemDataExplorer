@@ -1,3 +1,9 @@
+box::use(
+  ggplot2[aes, theme, element_blank, geom_tile],
+  paletteer[scale_color_paletteer_c, scale_fill_paletteer_d],
+  dplyr[filter]
+)
+
 merge_expr_tbs <- function(tb_list) {
   if (length(tb_list) > 1) {
     purrr::reduce(tb_list, \(x, y) {
@@ -45,9 +51,14 @@ read_expression_spec <- function(file, convert_names_to = "symbol") {
     cohort <- spec$cohort %||% "unassigned"
     pointblank::col_exists(tb, gene_col)
     tb <- dplyr::rename(tb, gene_id = gene_col)
+    tb$gene_id <- recode_genes(
+      tb$gene_id,
+      to = convert_names_to,
+      from = gene_name_format
+    )
     samples <- colnames(tb) |> purrr::discard(\(x) x == gene_col)
     meta <- tibble::tibble(
-      samples = samples,
+      sample = samples,
       cohort = cohort,
       tumor_type = ttype
     )
@@ -69,9 +80,138 @@ read_all_expr <- function() {
   convert_names_to <- get_golem_config("expression_viewer")$name_format %||%
     "symbol"
 
-  lapply(
+  combined <- lapply(
     list.files(dir, pattern = ".yml|yaml$"),
     \(f) read_expression_spec(f, convert_names_to)
   ) |>
     merge_expr_tbs()
+  # TODO: combine into tidySummarizedExperiment
 }
+
+#' Helper function to remove samples from expr_tbs
+#'
+#' @description
+#' @param expr_tbs List with two elements: expr containing the expression
+#' tibble and meta containing the sample metadata
+#' @param fn Filter function applied to metadata
+#' e.g. \(x) filter(x, x$tumor_type == "HCC")
+filter_expr_tbs <- function(expr_tbs, fn) {
+  meta <- fn(expr_tbs$meta)
+  samples_keep <- meta$sample
+  kept <- dplyr::select(expr_tbs$expr, "gene_id", dplyr::all_of(samples_keep))
+  list(
+    expr = kept,
+    meta = meta
+  )
+}
+
+
+tmm_normalize <- function(obj) {}
+
+# TODO: would also like a single comparison
+
+do_heatmap <- function(
+  expr_tbs,
+  genes,
+  cfg,
+  tumor_types = NULL,
+  cohorts = NULL
+) {
+  long <- expr_tbs$expr |>
+    filter(gene_id %in% genes) |>
+    tidyr::pivot_longer(-gene_id, names_to = "sample") |>
+    dplyr::left_join(expr_tbs$meta, by = dplyr::join_by(sample))
+  if (!is.null(tumor_types)) {
+    long <- filter(long, tumor_type %in% tumor_types)
+  }
+  if (!is.null(cohorts)) {
+    long <- filter(long, cohort %in% cohorts)
+  }
+
+  expr_palette <- cfg$expression %||% "ggthemes::Red-Gold"
+
+  n_cohorts <- length(unique(long$cohort))
+  n_tumor_types <- length(unique(long$tumor_type))
+  cohort_palette <- random_palette_d(n_cohorts)
+  ttype_palette <- random_palette_d(n_tumor_types)
+
+  top_theming <- theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.title.x = element_blank()
+  )
+  bot_theming <- theme(
+    axis.text.x = ggplot2::element_text(angle = 90),
+    axis.title.x = ggplot2::element_text(size = 20)
+  )
+
+  expr_plot <- ggplot2::ggplot(
+    long,
+    aes(x = sample, y = gene_id, fill = value)
+  ) +
+    geom_tile() +
+    theme(panel.grid = element_blank()) +
+    scale_fill_paletteer_c(expr_palette) +
+    ggplot2::guides(fill = ggplot2::guide_legend("Normalized expression"))
+
+  if (n_cohorts == 1 && n_tumor_types == 1) {
+    return(expr_plot + bot_theming + ggplot2::xlab("Sample"))
+  }
+  if (n_cohorts > 1) {
+    cohort_labels <- ggplot(
+      expr$meta,
+      aes(x = sample, fill = cohort, y = "1")
+    ) +
+      geom_tile() +
+      theme_void() +
+      scale_fill_paletteer_d(cohort_palette) +
+      ggplot2::guides(fill = ggplot2::guide_legend("Cohort"))
+  }
+  if (n_tumor_types > 1) {
+    ttype_labels <- ggplot(
+      expr$meta,
+      aes(x = sample, fill = tumor_type, y = "1")
+    ) +
+      geom_tile() +
+      theme_void() +
+      scale_fill_paletteer_d(ttype_palette) +
+      ggplot2::guides(fill = ggplot2::guide_legend("Tumor type"))
+  }
+
+  if (n_tumor_types > 1 && n_cohorts == 1) {
+    patchwork::wrap_plots(
+      expr_plot + top_theming,
+      ttype_labels + bot_theming + ggplot2::xlab("Sample"),
+      nrow = 2,
+      heights = c(0.95, 0.05)
+    )
+  } else if (n_cohorts > 1 && n_tumor_types == 1) {
+    patchwork::wrap_plots(
+      expr_plot + top_theming,
+      cohort_labels + bot_theming + ggplot2::xlab("Sample"),
+      nrow = 2,
+      heights = c(0.95, 0.05)
+    )
+  } else {
+    patchwork::wrap_plots(
+      expr_plot + top_theming,
+      cohort_labels + top_theming,
+      ttype_labels + bot_theming + ggplot2::xlab("Sample"),
+      nrow = 3,
+      heights = c(0.8, 0.05, 0.05)
+    )
+  }
+}
+
+do_heatmap(
+  expr,
+  genes = c(
+    "ENSG00000157916",
+    "ENSG00000298169",
+    "ENSG00000146463",
+    "ENSG00000180758",
+    "ENSG00000184677",
+    "ENSG00000158006"
+  ),
+  cfg = list()
+)
