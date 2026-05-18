@@ -48,8 +48,9 @@ recode_genes <- function(
 }
 
 random_palette_d <- function(min_length = NULL) {
-  if (!is.null(length)) {
-    choices <- paletteer::palettes_d_names |> filter(length >= min_length)
+  if (!is.null(min_length)) {
+    choices <- paletteer::palettes_d_names |>
+      dplyr::filter(length >= min_length)
   } else {
     choices <- paletteer::palettes_d_names
   }

@@ -1,6 +1,4 @@
-# [2026-05-15 Fri] BUG: there seems to be an issue with the %||% operator
-# you need to figure out how to correctly import it for use with golem
-# read up on the docs
+#' @importFrom rlang %||%
 
 merge_expr_tbs <- function(tb_list) {
   if (length(tb_list) > 1) {
@@ -114,10 +112,11 @@ do_heatmap <- function(
   cohorts = NULL
 ) {
   box::use(
-    ggplot2[aes, theme, element_blank, geom_tile],
+    ggplot2[aes, theme, element_blank, geom_tile, theme_void, ggplot],
     paletteer[scale_color_paletteer_c, scale_fill_paletteer_d],
     dplyr[filter]
   )
+  checkmate::assert_list(cfg)
 
   long <- expr_tbs$expr |>
     filter(gene_id %in% genes) |>
@@ -147,22 +146,22 @@ do_heatmap <- function(
     axis.title.x = ggplot2::element_text(size = 15)
   )
 
-  expr_plot <- ggplot2::ggplot(
+  expr_plot <- ggplot(
     long,
     aes(x = sample, y = gene_id, fill = value)
   ) +
     geom_tile(width = 0.90) +
     theme(panel.grid = element_blank()) +
-    scale_fill_paletteer_c(expr_palette) +
+    paletteer::scale_fill_paletteer_c(expr_palette) +
     ggplot2::guides(fill = ggplot2::guide_legend("Normalized expression")) +
     ggplot2::ylab("Gene")
 
-  if (n_cohorts == 1 && n_tumor_types == 1) {
+  if (n_cohorts <= 1 && n_tumor_types <= 1) {
     return(expr_plot + bot_theming + ggplot2::xlab("Sample"))
   }
   if (n_cohorts > 1) {
     cohort_labels <- ggplot(
-      expr$meta,
+      expr_tbs$meta,
       aes(x = sample, fill = cohort, y = "1")
     ) +
       geom_tile() +
@@ -172,7 +171,7 @@ do_heatmap <- function(
   }
   if (n_tumor_types > 1) {
     ttype_labels <- ggplot(
-      expr$meta,
+      expr_tbs$meta,
       aes(x = sample, fill = tumor_type, y = "1")
     ) +
       geom_tile() +
@@ -181,14 +180,14 @@ do_heatmap <- function(
       ggplot2::guides(fill = ggplot2::guide_legend("Tumor type"))
   }
 
-  if (n_tumor_types > 1 && n_cohorts == 1) {
+  if (n_tumor_types > 1 && n_cohorts <= 1) {
     patchwork::wrap_plots(
       expr_plot + top_theming,
       ttype_labels + bot_theming + ggplot2::xlab("Sample"),
       nrow = 2,
       heights = c(0.95, 0.05)
     )
-  } else if (n_cohorts > 1 && n_tumor_types == 1) {
+  } else if (n_cohorts > 1 && n_tumor_types <= 1) {
     patchwork::wrap_plots(
       expr_plot + top_theming,
       cohort_labels + bot_theming + ggplot2::xlab("Sample"),
