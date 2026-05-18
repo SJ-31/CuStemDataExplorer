@@ -122,11 +122,14 @@ do_heatmap <- function(
     filter(gene_id %in% genes) |>
     tidyr::pivot_longer(-gene_id, names_to = "sample") |>
     dplyr::left_join(expr_tbs$meta, by = dplyr::join_by(sample))
+  meta <- expr_tbs$meta
   if (!is.null(tumor_types)) {
     long <- filter(long, tumor_type %in% tumor_types)
+    meta <- filter(meta, tumor_type %in% tumor_types)
   }
   if (!is.null(cohorts)) {
     long <- filter(long, cohort %in% cohorts)
+    meta <- filter(meta, cohort %in% cohorts)
   }
 
   expr_palette <- cfg$expression %||% "ggthemes::Red-Gold"
@@ -160,20 +163,14 @@ do_heatmap <- function(
     return(expr_plot + bot_theming + ggplot2::xlab("Sample"))
   }
   if (n_cohorts > 1) {
-    cohort_labels <- ggplot(
-      expr_tbs$meta,
-      aes(x = sample, fill = cohort, y = "1")
-    ) +
+    cohort_labels <- ggplot(meta, aes(x = sample, fill = cohort, y = "1")) +
       geom_tile() +
       theme_void() +
       scale_fill_paletteer_d(cohort_palette) +
       ggplot2::guides(fill = ggplot2::guide_legend("Cohort"))
   }
   if (n_tumor_types > 1) {
-    ttype_labels <- ggplot(
-      expr_tbs$meta,
-      aes(x = sample, fill = tumor_type, y = "1")
-    ) +
+    ttype_labels <- ggplot(meta, aes(x = sample, fill = tumor_type, y = "1")) +
       geom_tile() +
       theme_void() +
       scale_fill_paletteer_d(ttype_palette) +

@@ -60,7 +60,9 @@ mod_compare_expression_server <- function(id) {
     output$expr_comparison <- shiny::renderPlot(do_heatmap(
       combined_expr,
       genes = input$gene_selection,
-      cfg = cfg$palette %||% list()
+      cfg = cfg$palette %||% list(),
+      tumor_types = input$tumor_type,
+      cohorts = input$cohort
     )) |>
       shiny::bindCache(input$gene_selection, input$tumor_type, input$cohort) |>
       shiny::bindEvent(input$gene_selection, input$tumor_type, input$cohort)
