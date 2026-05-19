@@ -14,14 +14,15 @@ mod_compare_expression_ui <- function(id) {
     bslib::layout_sidebar(
       shiny::plotOutput(ns("expr_comparison")),
       sidebar = bslib::sidebar(
-        shiny::h3("Filters"),
+        shiny::h4("Gene selection"),
         shiny::selectizeInput(
           ns("gene_selection"),
-          "Genes",
+          label = NULL,
           choices = NULL,
           multiple = TRUE,
           options = list(maxItems = 10)
         ),
+        shiny::h4("Filters"),
         shiny::selectizeInput(
           ns("tumor_type"),
           "Tumor Type",
@@ -76,13 +77,16 @@ mod_compare_expression_server <- function(id) {
       server = TRUE
     )
 
-    output$expr_comparison <- shiny::renderPlot(do_heatmap(
-      combined_expr,
-      genes = input$gene_selection,
-      cfg = cfg$palette %||% list(),
-      tumor_types = input$tumor_type,
-      cohorts = input$cohort
-    )) |>
+    output$expr_comparison <- shiny::renderPlot(
+      do_heatmap(
+        combined_expr,
+        genes = input$gene_selection,
+        cfg = cfg$palette %||% list(),
+        tumor_types = input$tumor_type,
+        cohorts = input$cohort
+      ),
+      res = 120
+    ) |>
       shiny::bindCache(input$gene_selection, input$tumor_type, input$cohort) |>
       shiny::bindEvent(input$gene_selection, input$tumor_type, input$cohort)
   })

@@ -182,14 +182,16 @@ do_heatmap <- function(
       expr_plot + top_theming,
       ttype_labels + bot_theming + ggplot2::xlab("Sample"),
       nrow = 2,
-      heights = c(0.95, 0.05)
+      heights = c(0.95, 0.05),
+      guides = "collect"
     )
   } else if (n_cohorts > 1 && n_tumor_types <= 1) {
     patchwork::wrap_plots(
       expr_plot + top_theming,
       cohort_labels + bot_theming + ggplot2::xlab("Sample"),
       nrow = 2,
-      heights = c(0.95, 0.05)
+      heights = c(0.95, 0.05),
+      guides = "collect"
     )
   } else {
     patchwork::wrap_plots(
@@ -197,7 +199,8 @@ do_heatmap <- function(
       cohort_labels + top_theming,
       ttype_labels + bot_theming + ggplot2::xlab("Sample"),
       nrow = 3,
-      heights = c(0.8, 0.05, 0.05)
+      heights = c(0.8, 0.05, 0.05),
+      guides = "collect"
     )
   }
 }
