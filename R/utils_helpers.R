@@ -31,20 +31,20 @@ recode_genes <- function(
   if (from == "ensembl") {
     names <- ref$ensembl_gene_id
   } else if (from == "symbol") {
-    names <- hgnc_symbol
+    names <- ref$hgnc_symbol
   } else {
     names <- ref$entrezgene_id
   }
   if (to == "ensembl") {
     vals <- ref$ensembl_gene_id
   } else if (to == "symbol") {
-    vals <- hgnc_symbol
+    vals <- ref$hgnc_symbol
   } else {
     vals <- ref$entrezgene_id
   }
   lookup <- setNames(vals, names)
   mapped <- lookup[vec]
-  ifelse(mapped, is.na(mapped), vec, mapped)
+  ifelse(is.na(mapped), vec, mapped)
 }
 
 random_palette_d <- function(min_length = NULL) {

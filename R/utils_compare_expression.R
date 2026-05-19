@@ -47,11 +47,11 @@ read_expression_spec <- function(file, convert_names_to = "symbol") {
     cohort <- spec$cohort %||% "unassigned"
     pointblank::col_exists(tb, gene_col)
     tb <- dplyr::rename(tb, gene_id = gene_col)
-    ## tb$gene_id <- recode_genes(
-    ##   tb$gene_id,
-    ##   to = convert_names_to,
-    ##   from = gene_name_format
-    ## )
+    tb$gene_id <- recode_genes(
+      tb$gene_id,
+      to = convert_names_to,
+      from = gene_name_format
+    )
     samples <- colnames(tb) |> purrr::discard(\(x) x == gene_col)
     meta <- tibble::tibble(
       sample = samples,
