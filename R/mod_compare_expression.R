@@ -15,29 +15,26 @@ mod_compare_expression_ui <- function(id) {
       shiny::plotOutput(ns("expr_comparison")),
       sidebar = bslib::sidebar(
         shiny::h3("Filters"),
-        shiny::selectInput(
+        shiny::selectizeInput(
           ns("gene_selection"),
           "Genes",
-          choices = c(
-            "ENSG00000142655",
-            "ENSG00000171621",
-            "ENSG00000173614",
-            "ENSG00000171729",
-            "ENSG00000157916"
-          ),
-          multiple = TRUE
+          choices = NULL,
+          multiple = TRUE,
+          options = list(maxItems = 10)
         ),
-        shiny::selectInput(
+        shiny::selectizeInput(
           ns("tumor_type"),
           "Tumor Type",
-          choices = c("HCC", "PDAC", "CRC"),
-          multiple = TRUE
+          choices = NULL,
+          multiple = TRUE,
+          options = list(items = NULL)
         ),
-        shiny::selectInput(
+        shiny::selectizeInput(
           ns("cohort"),
           "Cohort",
-          choices = c("HCC", "CRC", "PHcase"),
-          multiple = TRUE
+          choices = NULL,
+          multiple = TRUE,
+          options = list(items = NULL)
         ),
       )
     )
@@ -57,6 +54,28 @@ mod_compare_expression_server <- function(id) {
     }
     cfg <- get_golem_config("expression_viewer", config = key)
     combined_expr <- read_all_expr(cfg)
+    gene_ids <- purrr::discard(combined_expr$expr$gene_id, is.na) |>
+      `names<-`(NULL)
+
+    shiny::updateSelectizeInput(
+      session,
+      "gene_selection",
+      choices = gene_ids,
+      server = TRUE
+    )
+    shiny::updateSelectizeInput(
+      session,
+      "tumor_type",
+      choices = unique(combined_expr$meta$tumor_type),
+      server = TRUE
+    )
+    shiny::updateSelectizeInput(
+      session,
+      "cohort",
+      choices = unique(combined_expr$meta$cohort),
+      server = TRUE
+    )
+
     output$expr_comparison <- shiny::renderPlot(do_heatmap(
       combined_expr,
       genes = input$gene_selection,
