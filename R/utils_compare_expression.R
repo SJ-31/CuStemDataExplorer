@@ -43,16 +43,16 @@ read_anndata_pb <- function(
     `colnames<-`(sample_names) |>
     tibble::rownames_to_column(var = "gene_id") |>
     tidyr::as_tibble()
+  cols <- c("cohort", "tumor_type", "treatment", "patient")
   meta <- colData(bulked) |>
     tidyr::as_tibble() |>
-    dplyr::select(dplyr::any_of(
-      c(sample_col, "cohort", "tumor_type", "treatment", "patient")
-    ))
-  if ("cohort" %notin% colnames(meta)) {
-    meta$cohort <- NA_character_
-  }
-  if ("tumor_type" %notin% colnames(meta)) {
-    meta$tumor_type <- NA_character_
+    dplyr::select(dplyr::any_of(c(sample_col, cols)))
+  for (col in cols) {
+    if (col %in% colnames(meta)) {
+      meta[[col]] <- as.character(meta[[col]])
+    } else {
+      meta[[col]] <- NA_character_
+    }
   }
   list(expr = expr, meta = meta)
 }
@@ -212,6 +212,14 @@ tmm_normalize <- function(obj, log = TRUE) {
   list(expr = counts, meta = obj$meta)
 }
 
+label_theming <- function(plot, palette, legend) {
+  plot +
+    ggplot2::geom_tile() +
+    paletteer::scale_fill_paletteer_d(palette) +
+    ggplot2::theme_void() +
+    ggplot2::guides(fill = ggplot2::guide_legend(legend))
+}
+
 
 do_heatmap <- function(
   expr_tbs,
@@ -221,8 +229,8 @@ do_heatmap <- function(
   cohorts = NULL
 ) {
   box::use(
-    ggplot2[aes, theme, element_blank, geom_tile, theme_void, ggplot],
-    paletteer[scale_color_paletteer_c, scale_fill_paletteer_d],
+    ggplot2[aes, theme, element_blank, geom_tile, ggplot],
+    paletteer[scale_color_paletteer_c],
     dplyr[filter]
   )
   checkmate::assert_list(cfg)
@@ -242,11 +250,6 @@ do_heatmap <- function(
   }
 
   expr_palette <- cfg$expression %||% "ggthemes::Red-Gold"
-
-  n_cohorts <- length(unique(long$cohort))
-  n_tumor_types <- length(unique(long$tumor_type))
-  cohort_palette <- random_palette_d(n_cohorts)
-  ttype_palette <- random_palette_d(n_tumor_types)
 
   top_theming <- theme(
     axis.text.x = element_blank(),
@@ -268,41 +271,35 @@ do_heatmap <- function(
     ggplot2::guides(fill = ggplot2::guide_legend("Normalized expression")) +
     ggplot2::ylab("Gene")
 
-  if (n_cohorts <= 1 && n_tumor_types <= 1) {
-    return(expr_plot + bot_theming + ggplot2::xlab("Sample"))
-  }
-  if (n_cohorts > 1) {
-    cohort_labels <- ggplot(meta, aes(x = sample, fill = cohort, y = "1")) +
-      geom_tile() +
-      theme_void() +
-      scale_fill_paletteer_d(cohort_palette) +
-      ggplot2::guides(fill = ggplot2::guide_legend("Cohort"))
-  } else {
-    cohort_labels <- NULL
-  }
-  if (n_tumor_types > 1) {
-    ttype_labels <- ggplot(meta, aes(x = sample, fill = tumor_type, y = "1")) +
-      geom_tile() +
-      theme_void() +
-      scale_fill_paletteer_d(ttype_palette) +
-      ggplot2::guides(fill = ggplot2::guide_legend("Tumor type"))
-  } else {
-    ttype_labels <- NULL
+  plot_list <- list(expr_plot)
+
+  labels_to_add <- c(
+    "Cohort" = "cohort",
+    "Tumor type" = "tumor_type",
+    "Treatment" = "treatment",
+    "Patient" = "patient"
+  )
+  for (i in seq_along(labels_to_add)) {
+    label_col <- labels_to_add[i]
+    legend_display <- names(labels_to_add[i])
+    n_labels <- length(unique(long[[label_col]]))
+    if (n_labels > 1) {
+      palette <- random_palette_d(n_labels)
+      plot_list[[length(plot_list) + 1]] <- ggplot(
+        meta,
+        aes(x = sample, fill = !!as.symbol(label_col), y = "1")
+      ) |>
+        label_theming(palette = palette, legend = legend_display)
+    }
   }
 
-  plot_list <- list(
-    expr_plot,
-    cohort_labels,
-    ttype_labels
-  ) |>
-    purrr::discard(is.null)
   nrows <- length(plot_list)
-  for (i in seq_along(plot_list)) {
-    plot <- plot_list[[i]]
-    if (i == length(plot_list)) {
-      plot_list[[i]] <- plot + bot_theming + ggplot2::xlab("Sample")
+  for (j in seq_along(plot_list)) {
+    plot <- plot_list[[j]]
+    if (j == length(plot_list)) {
+      plot_list[[j]] <- plot + bot_theming + ggplot2::xlab("Sample")
     } else {
-      plot_list[[i]] <- plot + top_theming
+      plot_list[[j]] <- plot + top_theming
     }
   }
 
