@@ -76,8 +76,8 @@ read_expression_spec <- function(
       names(spec),
       subset.of = c(
         "cohort",
-        "patient",
-        "treatment",
+        "patients",
+        "treatments",
         "counts",
         "gene_name_format",
         "gene_col"

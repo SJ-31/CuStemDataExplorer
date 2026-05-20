@@ -1,0 +1,40 @@
+* =set_up.R=
+The =inst/set_up.R= script is responsible for processing raw data and caching it for the app to be used during runtime. A filled cache (located by default in =app_cache/cache=) is essential for the app to work so this script must be run at least once or pre-generated cache copied over from elsewhere.
+
+=set_up.R= uses the [[https://rstudio.github.io/config/reference/index.html][config]] package to read a yaml configuration file (defaults to the golem configuration =inst/golem-config.yml=) and retrieve the raw data.
+
+The relevant keys and their expected values are documented in *Input data* under the tabs using them.
+* Input data
+Gene names use the hg38 assembly from ensembl
+** Sheets
+#+begin_src yaml
+default:
+  data_sheets: # Links to data sheets
+    samples: "https://docs.google.com/spreadsheets/d/1h8aGAyhQk1IL2MALBZqmARUjvurcYIdCfi2GcHPQVc4/edit?gid=870277624#gid=870277624"
+    other: "https://docs.google.com/spreadsheets/d/1eNsxUPIf3X3l7W5wR4uIB-_TRWiB8yQry36zCxqlo0U/edit?gid=0#gid=0"
+#+end_src
+
++ TODO: document the expected formats of...
+  * The sheet data
+** Expression viewer
+#+begin_src yaml
+default:
+  expression_viewer:
+    spec_directory: DIR
+#+end_src
+
++ The  =Gene Expression= tab shows heatmaps comparing the (normalized) expression levels of user-selected genes from bulk or pseudobulked single-cell RNA-seq data.
++ Input data
+  * =spec_directory= is a directory containing yaml files specifying either bulk or scRNA-seq data files to include.
+  * Spec files have the following format
+    #+begin_src yaml
+TUMOR_TYPE: # top-level keys are tumor types, containing a list of count file specification
+  - counts: # The counts file, extension must be "csv", "tsv" or "h5ad"
+    gene_col: # For tsv, csv files, the column specifying gene names. Defaults to "gene_id"
+    gene_name_format: # OPTIONAL: the format of gene names used in the counts file. One of "ensembl" (default), "symbol", or "entrez"
+    patients: # OPTIONAL: mapping of sample names to patient names
+    treatments: # OPTIONAL: mapping of sample names to a treatment type e.g. "control", "antibiotic"
+    cohort: # OPTIONAL: name of the cohort to assign to samples in this file. If not provided, gets set to "unassigned"    
+    #+end_src
+    * =tsv= and =csv= count files are expected to have genes in rows and samples in columns, with a single column for gene names. Sample names must be unique
+    * =h5ad= files should contain valid [[https://anndata.readthedocs.io/en/stable/][AnnData]] objects. The =obs= object of each file must contain at least a column =sample=, and optionally =tumor_type=, =treatment=, and =patient=. If not provided, the information is taken from the yaml specification
