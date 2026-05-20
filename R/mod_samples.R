@@ -7,13 +7,13 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
-mod_samples_ui <- function(id) {
+mod_samples_ui <- function(id, sb) {
   ns <- NS(id)
   bslib::nav_panel(
     "Catalog",
     bslib::layout_sidebar(
       reactable::reactableOutput(ns("sample_tab")),
-      sidebar = SHEET_SIDEBAR
+      sidebar = sb
     )
   )
 }

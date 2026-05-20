@@ -7,13 +7,13 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
-mod_clinical_ui <- function(id) {
+mod_clinical_ui <- function(id, sb) {
   ns <- NS(id)
   bslib::nav_panel(
     "Clinical",
     bslib::layout_sidebar(
       reactable::reactableOutput(ns("clin_tab")),
-      sidebar = SHEET_SIDEBAR
+      sidebar = sb
     )
   )
 }

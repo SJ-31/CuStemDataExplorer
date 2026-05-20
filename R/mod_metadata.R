@@ -7,13 +7,13 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
-mod_metadata_ui <- function(id) {
+mod_metadata_ui <- function(id, sb) {
   ns <- NS(id)
   bslib::nav_panel(
     "Metadata",
     bslib::layout_sidebar(
       reactable::reactableOutput(ns("meta_tab")),
-      sidebar = SHEET_SIDEBAR
+      sidebar = sb
     ),
   )
 }

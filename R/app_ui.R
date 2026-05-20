@@ -8,16 +8,16 @@ app_ui <- function(request) {
   # Globals set up
   BFC <<- BiocFileCache::BiocFileCache(get_golem_config("cache"))
   SHEETS <<- from_bfc("sheets")
-  SHEET_SIDEBAR <<- get_sheet_sidebar(SHEETS)
 
+  sheet_sidebar <- get_sheet_sidebar(SHEETS)
   tagList(
     # Leave this function for adding external resources
     golem_add_external_resources(),
     # Your application UI logic
     bslib::page_navbar(
-      mod_clinical_ui("clinical_1"),
-      mod_metadata_ui("metadata_1"),
-      mod_samples_ui("samples_1"),
+      mod_clinical_ui("clinical_1", sheet_sidebar),
+      mod_metadata_ui("metadata_1", sheet_sidebar),
+      mod_samples_ui("samples_1", sheet_sidebar),
       mod_compare_expression_ui("compare_expression_1"),
       theme = bslib::bs_theme(bootswatch = "flatly"),
     )
