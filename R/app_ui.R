@@ -5,6 +5,11 @@
 #' @import shiny
 #' @noRd
 app_ui <- function(request) {
+  # Globals set up
+  BFC <<- BiocFileCache::BiocFileCache(get_golem_config("cache"))
+  SHEETS <<- from_bfc("sheets")
+  SHEET_SIDEBAR <<- get_sheet_sidebar(SHEETS)
+
   tagList(
     # Leave this function for adding external resources
     golem_add_external_resources(),

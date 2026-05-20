@@ -54,7 +54,7 @@ mod_compare_expression_server <- function(id) {
       key <- "dev"
     }
     cfg <- get_golem_config("expression_viewer", config = key)
-    combined_expr <- read_all_expr(cfg)
+    combined_expr <- from_bfc("bulk_expression")
     gene_ids <- purrr::discard(combined_expr$expr$gene_id, is.na) |>
       `names<-`(NULL)
 

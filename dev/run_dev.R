@@ -2,8 +2,7 @@
 options(golem.app.prod = FALSE) # TRUE = production mode, FALSE = development mode
 
 options(
-  shiny.port = httpuv::randomPort(),
-  shiny.launch.browser = TRUE,
+  shiny.port = 23461,
   error = rlang::entrace,
   rlang_backtrace_on_error = "full"
 )

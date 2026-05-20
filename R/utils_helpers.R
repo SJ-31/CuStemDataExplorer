@@ -27,7 +27,7 @@ recode_genes <- function(
   checkmate::assert_choice(from, choices = valid_formats)
   checkmate::assert_choice(to, choices = valid_formats)
   checkmate::assert_false(from == to)
-  ref <- StemDataExplorer::ensembl_genes_hg38
+  ref <- ensembl_genes_hg38
   if (from == "ensembl") {
     names <- ref$ensembl_gene_id
   } else if (from == "symbol") {
