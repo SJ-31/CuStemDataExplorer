@@ -11,8 +11,15 @@ main <- function(cfg) {
     list(name = "sheets", fn = get_sheets),
     list(
       name = "bulk_expression",
-      fn = \() read_all_expr(cfg$expression_viewer)
-    )
+      fn = \() {
+        read_all_expr(cfg$expression_viewer, allowed_exts = c("csv", "tsv")) |>
+          tmm_normalize()
+      }
+    ),
+    list(name = "sc_pseudobulk_expression", fn = \() {
+      read_all_expr(cfg$expression_viewer, allowed_exts = "h5ad") |>
+        tmm_normalize()
+    })
   )
 
   for (spec in specs) {

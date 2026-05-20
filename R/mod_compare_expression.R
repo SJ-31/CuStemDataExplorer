@@ -7,10 +7,10 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
-mod_compare_expression_ui <- function(id) {
+mod_compare_expression_ui <- function(id, label) {
   ns <- NS(id)
   bslib::nav_panel(
-    "Gene Expression",
+    label,
     bslib::layout_sidebar(
       shiny::plotOutput(ns("expr_comparison")),
       sidebar = bslib::sidebar(
@@ -20,7 +20,7 @@ mod_compare_expression_ui <- function(id) {
           label = NULL,
           choices = NULL,
           multiple = TRUE,
-          options = list(maxItems = 10)
+          options = list(maxItems = 15)
         ),
         shiny::h4("Filters"),
         shiny::selectizeInput(
@@ -45,7 +45,7 @@ mod_compare_expression_ui <- function(id) {
 #' compare_expression Server Functions
 #'
 #' @noRd
-mod_compare_expression_server <- function(id) {
+mod_compare_expression_server <- function(id, cached) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     if (options()$golem.app.prod) {
@@ -54,7 +54,7 @@ mod_compare_expression_server <- function(id) {
       key <- "dev"
     }
     cfg <- get_golem_config("expression_viewer", config = key)
-    combined_expr <- from_bfc("bulk_expression")
+    combined_expr <- from_bfc(cached)
     gene_ids <- purrr::discard(combined_expr$expr$gene_id, is.na) |>
       `names<-`(NULL)
 

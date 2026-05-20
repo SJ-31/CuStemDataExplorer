@@ -18,7 +18,14 @@ app_ui <- function(request) {
       mod_clinical_ui("clinical_1", sheet_sidebar),
       mod_metadata_ui("metadata_1", sheet_sidebar),
       mod_samples_ui("samples_1", sheet_sidebar),
-      mod_compare_expression_ui("compare_expression_1"),
+      bslib::nav_menu(
+        "Gene expression",
+        mod_compare_expression_ui("compare_expression_1", "Bulk"),
+        mod_compare_expression_ui(
+          "compare_expression_2",
+          "Single-cell (pseudobulk)"
+        )
+      ),
       theme = bslib::bs_theme(bootswatch = "flatly"),
     )
   )
