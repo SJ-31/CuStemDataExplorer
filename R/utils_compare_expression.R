@@ -52,13 +52,16 @@ read_expression_spec <- function(file, convert_names_to = "symbol") {
       to = convert_names_to,
       from = gene_name_format
     )
+    tb <- dplyr::distinct(tb, gene_id, .keep_all = TRUE) |>
+      dplyr::filter(gene_id %notin% blacklist)
     samples <- colnames(tb) |> purrr::discard(\(x) x == gene_col)
-    meta <- tibble::tibble(
-      sample = samples,
-      cohort = cohort,
-      tumor_type = ttype
-    )
-
+    if (is.null(meta)) {
+      meta <- tibble::tibble(
+        sample = samples,
+        cohort = cohort,
+        tumor_type = ttype
+      )
+    }
     list(expr = tb, meta = meta)
   }
 
@@ -70,14 +73,25 @@ read_expression_spec <- function(file, convert_names_to = "symbol") {
     merge_expr_tbs()
 }
 
-read_all_expr <- function(cfg) {
+read_all_expr <- function(
+  cfg,
+  allowed_exts = c("csv", "tsv", "h5ad"),
+  blacklist = c("N_unmapped", "N_multimapping", "N_noFeature", "N_ambiguous")
+) {
   dir <- cfg$spec_directory
   checkmate::assert_directory_exists(dir)
   convert_names_to <- cfg$name_format %||% "symbol"
 
   combined <- lapply(
     list.files(dir, pattern = ".yml|yaml$", full.names = TRUE),
-    \(f) read_expression_spec(f, convert_names_to)
+    \(f) {
+      read_expression_spec(
+        f,
+        convert_names_to,
+        allowed_exts = allowed_exts,
+        blacklist = blacklist
+      )
+    }
   ) |>
     merge_expr_tbs()
 }
@@ -100,9 +114,22 @@ filter_expr_tbs <- function(expr_tbs, fn) {
 }
 
 
-tmm_normalize <- function(obj) {}
+#' Compute TMM normalization factors from expression with TMM
+#' convert to (log) CPM
+#'
+tmm_normalize <- function(obj, log = TRUE) {
+  dge <- local({
+    tmp <- tibble::column_to_rownames(obj$expr, var = "gene_id")
+    edgeR::DGEList(counts = tmp)
+  })
+  dge <- edgeR::normLibSizes(dge)
+  counts <- edgeR::cpm(dge, log = log) |>
+    as.data.frame() |>
+    tibble::rownames_to_column(var = "gene_id") |>
+    tibble::as_tibble()
+  list(expr = counts, meta = obj$meta)
+}
 
-# TODO: would also like a single comparison
 
 do_heatmap <- function(
   expr_tbs,
