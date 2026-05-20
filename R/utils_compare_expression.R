@@ -284,7 +284,7 @@ do_heatmap <- function(
     legend_display <- names(labels_to_add[i])
     n_labels <- length(unique(long[[label_col]]))
     if (n_labels > 1) {
-      palette <- random_palette_d(n_labels)
+      palette <- palette_from_cache(key = label_col, min_length = n_labels)
       plot_list[[length(plot_list) + 1]] <- ggplot(
         meta,
         aes(x = sample, fill = !!as.symbol(label_col), y = "1")

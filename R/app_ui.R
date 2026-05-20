@@ -8,6 +8,7 @@ app_ui <- function(request) {
   # Globals set up
   BFC <<- BiocFileCache::BiocFileCache(get_golem_config("cache"))
   SHEETS <<- from_bfc("sheets")
+  CACHE <<- cachem::cache_mem()
 
   sheet_sidebar <- get_sheet_sidebar(SHEETS)
   tagList(

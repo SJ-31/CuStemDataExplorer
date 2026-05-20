@@ -47,8 +47,10 @@ recode_genes <- function(
   ifelse(is.na(mapped), vec, mapped)
 }
 
-random_palette_d <- function(min_length = NULL) {
-  if (!is.null(min_length)) {
+random_palette <- function(min_length = NULL, continuous = FALSE) {
+  if (continuous) {
+    choices <- paletteer::palettes_c_names
+  } else if (!is.null(min_length)) {
     choices <- paletteer::palettes_d_names |>
       dplyr::filter(length >= min_length)
   } else {
@@ -58,6 +60,39 @@ random_palette_d <- function(min_length = NULL) {
     dplyr::slice_sample(n = 1) |>
     dplyr::select(package, palette) |>
     paste0(collapse = "::")
+}
+
+random_palette_d <- function(min_length = NULL) {
+  random_palette(min_length = min_length, continuous = FALSE)
+}
+
+random_palette_c <- function() {
+  random_palette(continuous = TRUE)
+}
+
+palette_from_cache <- function(key, min_length = NULL, discrete = TRUE) {
+  if (discrete) {
+    fn <- \() random_palette_d(min_length = min_length)
+  } else {
+    fn <- random_palette_c
+  }
+  if (!is.null(min_length)) {
+    key <- glue::glue("palette_{key}_{min_length}")
+  } else {
+    key <- glue::glue("palette_{key}")
+  }
+  if (exists("CACHE")) {
+    lookup <- CACHE$get(key)
+    if (fastmap::is.key_missing(lookup)) {
+      palette <- fn()
+      CACHE$set(key, palette)
+      palette
+    } else {
+      lookup
+    }
+  } else {
+    fn()
+  }
 }
 
 #' Retrieve the most recently saved resource `rname` from the
