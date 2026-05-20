@@ -233,7 +233,7 @@ do_heatmap <- function(
     axis.title.x = element_blank()
   )
   bot_theming <- theme(
-    axis.text.x = ggplot2::element_text(angle = 90),
+    axis.text.x = ggplot2::element_text(angle = 90, hjust = 1),
     axis.title.x = ggplot2::element_text(size = 15)
   )
 
@@ -256,6 +256,8 @@ do_heatmap <- function(
       theme_void() +
       scale_fill_paletteer_d(cohort_palette) +
       ggplot2::guides(fill = ggplot2::guide_legend("Cohort"))
+  } else {
+    cohort_labels <- NULL
   }
   if (n_tumor_types > 1) {
     ttype_labels <- ggplot(meta, aes(x = sample, fill = tumor_type, y = "1")) +
@@ -263,32 +265,35 @@ do_heatmap <- function(
       theme_void() +
       scale_fill_paletteer_d(ttype_palette) +
       ggplot2::guides(fill = ggplot2::guide_legend("Tumor type"))
+  } else {
+    ttype_labels <- NULL
   }
 
-  if (n_tumor_types > 1 && n_cohorts <= 1) {
-    patchwork::wrap_plots(
-      expr_plot + top_theming,
-      ttype_labels + bot_theming + ggplot2::xlab("Sample"),
-      nrow = 2,
-      heights = c(0.95, 0.05),
-      guides = "collect"
-    )
-  } else if (n_cohorts > 1 && n_tumor_types <= 1) {
-    patchwork::wrap_plots(
-      expr_plot + top_theming,
-      cohort_labels + bot_theming + ggplot2::xlab("Sample"),
-      nrow = 2,
-      heights = c(0.95, 0.05),
-      guides = "collect"
-    )
-  } else {
-    patchwork::wrap_plots(
-      expr_plot + top_theming,
-      cohort_labels + top_theming,
-      ttype_labels + bot_theming + ggplot2::xlab("Sample"),
-      nrow = 3,
-      heights = c(0.8, 0.05, 0.05),
-      guides = "collect"
-    )
+  plot_list <- list(
+    expr_plot,
+    cohort_labels,
+    ttype_labels
+  ) |>
+    purrr::discard(is.null)
+  nrows <- length(plot_list)
+  for (i in seq_along(plot_list)) {
+    plot <- plot_list[[i]]
+    if (i == length(plot_list)) {
+      plot_list[[i]] <- plot + bot_theming + ggplot2::xlab("Sample")
+    } else {
+      plot_list[[i]] <- plot + top_theming
+    }
   }
+
+  heights <- local({
+    b <- rep(0.05, nrows - 1)
+    c(1 - sum(b), b)
+  })
+
+  patchwork::wrap_plots(
+    plot_list,
+    nrow = nrows,
+    heights = heights,
+    guides = "collect"
+  )
 }
