@@ -59,3 +59,14 @@ random_palette_d <- function(min_length = NULL) {
     dplyr::select(package, palette) |>
     paste0(collapse = "::")
 }
+
+#' Retrieve the most recently saved resource `rname` from the
+#' global cache
+#'
+from_bfc <- function(rname) {
+  BiocFileCache::bfcquery(BFC, rname) |>
+    dplyr::arrange(dplyr::desc(create_time)) |>
+    head(n = 1) |>
+    purrr::pluck("rpath") |>
+    readRDS()
+}
