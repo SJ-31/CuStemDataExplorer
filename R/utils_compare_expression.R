@@ -1,6 +1,7 @@
 #' @importFrom rlang %||%
 
 merge_expr_tbs <- function(tb_list) {
+  tb_list <- purrr::discard(tb_list, is.null)
   if (length(tb_list) > 1) {
     purrr::reduce(tb_list, \(x, y) {
       list(
@@ -12,39 +13,99 @@ merge_expr_tbs <- function(tb_list) {
         meta = dplyr::bind_rows(x$meta, y$meta)
       )
     })
-  } else {
+  } else if (length(tb_list) == 1) {
     tb_list[[1]]
+  } else {
+    NULL
   }
 }
 
+#' Read an h5ad file and pseudobulk it
+#'
+#' @return List of two tibbles, `expr` and `meta`
+#'
+read_anndata_pb <- function(
+  file,
+  cache = TRUE,
+  convert_names_to = "symbol",
+  sample_col = "sample"
+) {
+  box::use(SingleCellExperiment[colData])
+  adata <- anndataR::read_h5ad(file, as = "SingleCellExperiment")
+  bulked <- scrapper::aggregateAcrossCells.se(
+    adata,
+    list(sample = colData(adata)[[sample_col]]),
+    assay.type = "X"
+  )
+  sample_names <- colData(bulked)[[sample_col]]
+  expr <- SummarizedExperiment::assay(bulked, "sums") |>
+    as.data.frame() |>
+    `colnames<-`(sample_names) |>
+    tibble::rownames_to_column(var = "gene_id") |>
+    tidyr::as_tibble()
+  meta <- colData(bulked) |>
+    tidyr::as_tibble() |>
+    dplyr::select(dplyr::any_of(
+      c(sample_col, "cohort", "tumor_type", "treatment", "patient")
+    ))
+  if ("cohort" %notin% colnames(meta)) {
+    meta$cohort <- NA_character_
+  }
+  if ("tumor_type" %notin% colnames(meta)) {
+    meta$tumor_type <- NA_character_
+  }
+  list(expr = expr, meta = meta)
+}
 
 #' Helper function to read expression data from yaml configuration
 #'
-#' @description
+#' @return
 #'
-read_expression_spec <- function(file, convert_names_to = "symbol") {
+read_expression_spec <- function(
+  file,
+  convert_names_to = "symbol",
+  allowed_exts = c("csv", "tsv", "h5ad"),
+  blacklist = NULL
+) {
   all_spec <- yaml::read_yaml(file)
 
   read_helper <- function(spec, ttype) {
+    cohort_val <- spec$cohort %||% "unassigned"
     checkmate::assert_list(spec)
     checkmate::assert_names(
       names(spec),
       subset.of = c(
         "cohort",
+        "patient",
+        "treatment",
         "counts",
         "gene_name_format",
         "gene_col"
       )
     )
     checkmate::assert_file_exists(spec$counts)
-    if (stringr::str_ends(spec$counts, "csv")) {
-      tb <- readr::read_csv(spec$counts)
+    meta <- NULL
+    ext <- tools::file_ext(spec$counts)
+    if (ext %notin% allowed_exts) {
+      return(NULL)
+    } else if (ext == "csv") {
+      tb <- suppressMessages(readr::read_csv(spec$counts))
+    } else if (ext == "tsv") {
+      tb <- suppressMessages(readr::read_tsv(spec$counts))
+    } else if (ext == "h5ad") {
+      from_anndata <- read_anndata_pb(spec$counts)
+      tb <- from_anndata$expr
+      meta <- from_anndata$meta
+      meta <- meta |>
+        dplyr::mutate(
+          tumor_type = dplyr::replace_values(tumor_type, NA ~ ttype),
+          cohort = dplyr::replace_values(cohort, NA ~ cohort_val),
+        )
     } else {
-      tb <- readr::read_tsv(spec$counts)
+      stop("Extension not supported yet")
     }
     gene_col <- spec$gene_col %||% "gene_id"
     gene_name_format <- spec$gene_name_format %||% "ensembl"
-    cohort <- spec$cohort %||% "unassigned"
     pointblank::col_exists(tb, gene_col)
     tb <- dplyr::rename(tb, gene_id = gene_col)
     tb$gene_id <- recode_genes(
@@ -58,7 +119,7 @@ read_expression_spec <- function(file, convert_names_to = "symbol") {
     if (is.null(meta)) {
       meta <- tibble::tibble(
         sample = samples,
-        cohort = cohort,
+        cohort = cohort_val,
         tumor_type = ttype
       )
     }
