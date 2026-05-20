@@ -23,9 +23,13 @@ main <- function(cfg) {
   )
 
   for (spec in specs) {
-    obj <- spec$fn()
-    file_path <- bfcnew(bfc, spec$name, ext = ".rds")
-    saveRDS(obj, file_path)
+    if (nrow(bfcquery(bfc, spec$name)) > 0) {
+      message(glue("Object `{spec$name}` found in cache already, skipping..."))
+    } else {
+      obj <- spec$fn()
+      file_path <- bfcnew(bfc, spec$name, ext = ".rds")
+      saveRDS(obj, file_path)
+    }
   }
 }
 
@@ -59,7 +63,10 @@ if (sys.nframe() == 0) {
   cfg_ext <- config::get(file = args$file, config = args$config)
   cfg <- config::merge(cfg, cfg_ext)
   if (args$remove) {
-    BiocFileCache::removebfc(BiocFileCache::BiocFileCache(cfg$cache))
+    BiocFileCache::removebfc(
+      BiocFileCache::BiocFileCache(cfg$cache),
+      ask = FALSE
+    )
   }
   main(cfg)
 }
