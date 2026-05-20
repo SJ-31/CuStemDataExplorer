@@ -3,7 +3,7 @@
 devtools::load_all()
 
 main <- function(cfg) {
-  box::use(BiocFileCache[BiocFileCache, bfcnew])
+  box::use(BiocFileCache[BiocFileCache, bfcnew, bfcquery], glue[glue])
 
   bfc <- BiocFileCache(cfg$cache)
 
@@ -42,6 +42,7 @@ if (sys.nframe() == 0) {
   parser <- add_option(
     parser,
     c("-r", "--remove"),
+    action = "store_true",
     type = "logical",
     help = "Remove old cache and create a new one",
     default = FALSE
@@ -51,7 +52,7 @@ if (sys.nframe() == 0) {
   cfg_ext <- config::get(file = args$file, config = args$config)
   cfg <- config::merge(cfg, cfg_ext)
   if (args$remove) {
-    BiocFileCache::removebfc(cfg$cache)
+    BiocFileCache::removebfc(BiocFileCache::BiocFileCache(cfg$cache))
   }
   main(cfg)
 }

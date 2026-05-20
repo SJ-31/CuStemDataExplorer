@@ -1,0 +1,15 @@
+[tasks]
+golem = "Rscript -e 'golem::run_dev()'"
+browse = "firefox http://127.0.0.1:23461/"
+
+[tasks.set_up_dev]
+usage = '''
+flag "--remove" help="Remove old cache" default="false"
+'''
+run = '''
+if [[ "${usage_remove}" == "true" ]]; then
+   Rscript inst/set_up.R -f inst/golem-config.yml -c dev -r
+else
+   Rscript inst/set_up.R -f inst/golem-config.yml -c dev
+fi
+'''
