@@ -120,9 +120,30 @@ read_expression_spec <- function(
       meta <- tibble::tibble(
         sample = samples,
         cohort = cohort_val,
-        tumor_type = ttype
+        tumor_type = ttype,
+        patient = NA_character_,
+        treatment = NA_character_
       )
     }
+    if (!is.null(spec$patients)) {
+      mapping <- unlist(spec$patients)
+      checkmate::assert_character(mapping, names = "named")
+      meta$patient <- ifelse(
+        is.na(meta$patient),
+        mapping[meta$sample],
+        meta$patient
+      )
+    }
+    if (!is.null(spec$treatments)) {
+      mapping <- unlist(spec$treatments)
+      checkmate::assert_character(mapping, names = "named")
+      meta$treatment <- ifelse(
+        is.na(meta$treatment),
+        mapping[meta$sample],
+        meta$treatment
+      )
+    }
+
     list(expr = tb, meta = meta)
   }
 
