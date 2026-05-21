@@ -6,7 +6,9 @@
 #' @noRd
 app_ui <- function(request) {
   # Globals set up
-  BFC <<- BiocFileCache::BiocFileCache(get_golem_config("cache"))
+  set_logger()
+  BFC <<- get_validate_cache()
+
   SHEETS <<- from_bfc("sheets")
   CACHE <<- cachem::cache_mem()
 

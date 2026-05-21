@@ -1,6 +1,8 @@
 # Set options here
 options(golem.app.prod = FALSE) # TRUE = production mode, FALSE = development mode
 
+logger::log_threshold(logger::DEBUG)
+
 options(
   shiny.port = 23461,
   error = rlang::entrace,

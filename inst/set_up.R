@@ -4,24 +4,8 @@ devtools::load_all()
 
 main <- function(cfg) {
   box::use(BiocFileCache[BiocFileCache, bfcnew, bfcquery], glue[glue])
-
   bfc <- BiocFileCache(cfg$cache)
-
-  specs <- list(
-    list(name = "sheets", fn = get_sheets),
-    list(
-      name = "bulk_expression",
-      fn = \() {
-        read_all_expr(cfg$expression_viewer, allowed_exts = c("csv", "tsv")) |>
-          tmm_normalize()
-      }
-    ),
-    list(name = "sc_pseudobulk_expression", fn = \() {
-      read_all_expr(cfg$expression_viewer, allowed_exts = "h5ad") |>
-        tmm_normalize()
-    })
-  )
-
+  specs <- get_cache_spec(cfg)
   for (spec in specs) {
     if (nrow(bfcquery(bfc, spec$name)) > 0) {
       message(glue("Object `{spec$name}` found in cache already, skipping..."))

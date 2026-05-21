@@ -18,9 +18,9 @@ golem_config_env <- function() {
     if (file.exists(env_lookup)) {
       env_lookup
     } else {
-      warning(glue::glue(
+      logger::log_warn(
         "Configuration file {env_lookup} specified by GOLEM_CONFIG_FILE does n't exist! Using only defaults"
-      ))
+      )
       NULL
     }
   } else {
