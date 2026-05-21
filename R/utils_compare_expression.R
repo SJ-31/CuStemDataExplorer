@@ -59,8 +59,9 @@ read_anndata_pb <- function(
 
 #' Helper function to read expression data from yaml configuration
 #'
-#' @return
-#'
+#' @return List of two aligned tibbles: one containing the expression matrix,
+#' the other the metadata
+#' TODO: could store in SingleCellExperiment instead
 read_expression_spec <- function(
   file,
   convert_names_to = "symbol",
@@ -180,7 +181,6 @@ read_all_expr <- function(
 
 #' Helper function to remove samples from expr_tbs
 #'
-#' @description
 #' @param expr_tbs List with two elements: expr containing the expression
 #' tibble and meta containing the sample metadata
 #' @param fn Filter function applied to metadata

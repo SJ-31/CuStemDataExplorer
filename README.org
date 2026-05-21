@@ -34,7 +34,9 @@ TUMOR_TYPE: # top-level keys are tumor types, containing a list of count file sp
     gene_name_format: # OPTIONAL: the format of gene names used in the counts file. One of "ensembl" (default), "symbol", or "entrez"
     patients: # OPTIONAL: mapping of sample names to patient names
     treatments: # OPTIONAL: mapping of sample names to a treatment type e.g. "control", "antibiotic"
-    cohort: # OPTIONAL: name of the cohort to assign to samples in this file. If not provided, gets set to "unassigned"    
+    cohort: # OPTIONAL: name of the cohort to assign to samples in this file. If not provided, gets set to "unassigned"
     #+end_src
     * =tsv= and =csv= count files are expected to have genes in rows and samples in columns, with a single column for gene names. Sample names must be unique
     * =h5ad= files should contain valid [[https://anndata.readthedocs.io/en/stable/][AnnData]] objects. The =obs= object of each file must contain at least a column =sample=, and optionally =tumor_type=, =treatment=, and =patient=. If not provided, the information is taken from the yaml specification
+* App configuration
+The app configuration file can be specified with the environment variable =GOLEM_CONFIG_FILE=, which is used to update the default configuration. If this isn't set, only the defaults in =inst/golem-config.yml= are used
