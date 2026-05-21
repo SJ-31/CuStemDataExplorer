@@ -2,6 +2,34 @@
 golem = "Rscript -e 'golem::run_dev()'"
 browse = "firefox http://127.0.0.1:23461/"
 
+[tasks.get_docker_file]
+shell = "Rscript -e"
+run = '''
+golem::add_dockerfile_with_renv(open = FALSE, output_dir = "deploy")
+'''
+sources = ["DESCRIPTION", "R/*"]
+outputs = [
+  "deploy/Dockerfile",
+  "deploy/renv.lock.prod",
+  "deploy/Dockerfile_base",
+]
+
+[tasks.docker_build]
+description = "Build docker image"
+depends = ["get_docker_file"]
+dir = "./deploy"
+run = '''
+docker build -f Dockerfile_base --progress=plain -t stemdataexplorer_base .
+docker build -f Dockerfile --progress=plain -t stemdataexplorer:latest .
+'''
+
+[tasks.clean]
+run = '''
+if [[ -e "deploy" ]]; then
+   rm -R deploy
+fi
+'''
+
 [tasks.set_up_dev]
 usage = '''
 flag "--remove" help="Remove old cache" default="false"

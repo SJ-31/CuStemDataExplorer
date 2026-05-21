@@ -23,6 +23,7 @@ Imports:
     glue,
     golem,
     googlesheets4,
+    logger,
     paletteer,
     patchwork,
     pointblank,
