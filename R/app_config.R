@@ -12,6 +12,21 @@ app_sys <- function(...) {
   system.file(..., package = "StemDataExplorer")
 }
 
+golem_config_env <- function() {
+  env_lookup <- Sys.getenv("GOLEM_CONFIG_FILE")
+  if (nchar(env_lookup) > 0) {
+    if (file.exists(env_lookup)) {
+      env_lookup
+    } else {
+      warning(glue::glue(
+        "Configuration file {env_lookup} specified by GOLEM_CONFIG_FILE does n't exist! Using only defaults"
+      ))
+      NULL
+    }
+  } else {
+    NULL
+  }
+}
 
 #' Read App Config
 #'
@@ -35,10 +50,22 @@ get_golem_config <- function(
   # Modify this if your config file is somewhere else
   file = app_sys("golem-config.yml")
 ) {
-  config::get(
+  defaults <- config::get(
     value = value,
     config = config,
     file = file,
     use_parent = use_parent
   )
+  from_env <- golem_config_env()
+  if (!is.null(from_env)) {
+    modified <- config::get(
+      value = value,
+      config = config,
+      file = from_env,
+      use_parent = TRUE
+    )
+    config::merge(defaults, modified)
+  } else {
+    defaults
+  }
 }
