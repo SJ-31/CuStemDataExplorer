@@ -99,9 +99,76 @@ palette_from_cache <- function(key, min_length = NULL, discrete = TRUE) {
 #' global cache
 #'
 from_bfc <- function(rname) {
-  BiocFileCache::bfcquery(BFC, rname) |>
-    dplyr::arrange(dplyr::desc(create_time)) |>
-    head(n = 1) |>
-    purrr::pluck("rpath") |>
-    readRDS()
+  query_res <- BiocFileCache::bfcquery(BFC, rname)
+  if (nrow(query_res) > 0) {
+    query_res |>
+      dplyr::arrange(dplyr::desc(create_time)) |>
+      head(n = 1) |>
+      purrr::pluck("rpath") |>
+      readRDS()
+  }
+}
+
+set_logger <- function() {
+  file <- get_golem_config("log")
+  logger::log_appender(logger::appender_tee(file))
+}
+
+
+#' List of objects to cache and how
+#'
+#' @description
+#' Each element of this list must be a list with three keys:
+#' name: the name of the key used to cache the object
+#' fn: a function of no arguments that returns the object to cache
+#' usage: string listing the modules, features the object is required by.
+#'      for logging and debugging purposes when the cache is empty
+get_cache_spec <- function(cfg = NULL) {
+  list(
+    list(
+      name = "sheets",
+      fn = get_sheets,
+      usage = "Clinical, metadata, and sample tabs"
+    ),
+    list(
+      name = "bulk_expression",
+      fn = \() {
+        read_all_expr(cfg$expression_viewer, allowed_exts = c("csv", "tsv")) |>
+          tmm_normalize()
+      },
+      usage = "Bulk expression comparison"
+    ),
+    list(
+      name = "sc_pseudobulk_expression",
+      fn = \() {
+        read_all_expr(cfg$expression_viewer, allowed_exts = "h5ad") |>
+          tmm_normalize()
+      },
+      usage = "Single-cell pseudobulk expression comparison"
+    )
+  )
+}
+
+get_validate_cache <- function() {
+  bfc <- BiocFileCache::BiocFileCache(get_golem_config("cache"))
+  cached <- BiocFileCache::bfcinfo(bfc)$rname |> unique()
+  vals <- vapply(
+    get_cache_spec(NULL),
+    \(spec) {
+      key <- spec$name
+      usage <- spec$usage
+      if (key %notin% cached) {
+        logger::log_warn(
+          "The required key {key} is missing from the cache Run inst/set_up.R\n
+--- Module(s)/feature(s) `{usage}` will not be available"
+        )
+      }
+      key %in% cached
+    },
+    FUN.VALUE = logical(1)
+  )
+  if (all(!vals)) {
+    stop("Cache contains none of the required keys. Run inst/set_up.R")
+  }
+  bfc
 }

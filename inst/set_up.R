@@ -25,7 +25,7 @@ if (sys.nframe() == 0) {
     c("-f", "--file"),
     type = "character",
     help = "Configuration file",
-    default = "config.yml"
+    default = app_sys("golem-config.yml")
   )
   parser <- add_option(
     parser,
