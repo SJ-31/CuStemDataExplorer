@@ -19,7 +19,7 @@ golem_config_env <- function() {
       env_lookup
     } else {
       logger::log_warn(
-        "Configuration file {env_lookup} specified by GOLEM_CONFIG_FILE does n't exist! Using only defaults"
+        "Configuration file {env_lookup} specified by GOLEM_CONFIG_FILE doesn't exist! Using only defaults"
       )
       NULL
     }
@@ -38,7 +38,7 @@ golem_config_env <- function() {
 #'
 #' @noRd
 get_golem_config <- function(
-  value,
+  value = NULL,
   config = Sys.getenv(
     "GOLEM_CONFIG_ACTIVE",
     Sys.getenv(

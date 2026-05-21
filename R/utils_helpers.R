@@ -150,8 +150,30 @@ get_cache_spec <- function(cfg = NULL) {
 }
 
 get_validate_cache <- function() {
-  bfc <- BiocFileCache::BiocFileCache(get_golem_config("cache"))
-  cached <- BiocFileCache::bfcinfo(bfc)$rname |> unique()
+  cache_path <- get_golem_config("cache")
+  bfc <- withCallingHandlers(
+    expr = BiocFileCache::BiocFileCache(cache_path),
+    error = \(e) {
+      logger::log_fatal(
+        "Failed to read from passed cache `{cache_path}`\n--- TRACEBACK ---\n {e}"
+      )
+      logger::log_fatal("Current configuration: {get_golem_config()}")
+      cache_exists <- dir.exists(cache_path)
+      logger::log_info("Cache existence: {cache_exists}")
+      if (cache_exists) {
+        logger::log_info("Cache contents: {list.files(cache_path)}")
+      }
+      NULL
+    }
+  )
+  if (is.null(bfc)) {
+    stop("Cache is null")
+  }
+  try({
+    logger::log_debug()
+  })
+  bfc <-
+    cached <- BiocFileCache::bfcinfo(bfc)$rname |> unique()
   vals <- vapply(
     get_cache_spec(NULL),
     \(spec) {
