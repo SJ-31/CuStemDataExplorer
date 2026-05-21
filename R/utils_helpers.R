@@ -169,11 +169,7 @@ get_validate_cache <- function() {
   if (is.null(bfc)) {
     stop("Cache is null")
   }
-  try({
-    logger::log_debug()
-  })
-  bfc <-
-    cached <- BiocFileCache::bfcinfo(bfc)$rname |> unique()
+  cached <- BiocFileCache::bfcinfo(bfc)$rname |> unique()
   vals <- vapply(
     get_cache_spec(NULL),
     \(spec) {
