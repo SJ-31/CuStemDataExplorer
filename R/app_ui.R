@@ -18,9 +18,13 @@ app_ui <- function(request) {
     golem_add_external_resources(),
     # Your application UI logic
     bslib::page_navbar(
-      mod_clinical_ui("clinical_1", sheet_sidebar),
-      mod_metadata_ui("metadata_1", sheet_sidebar),
-      mod_samples_ui("samples_1", sheet_sidebar),
+      mod_stats_ui("stats_1"),
+      bslib::nav_menu(
+        "Sample catalog",
+        mod_clinical_ui("clinical_1", sheet_sidebar),
+        mod_metadata_ui("metadata_1", sheet_sidebar),
+        mod_samples_ui("samples_1", sheet_sidebar),
+      ),
       bslib::nav_menu(
         "Gene expression",
         mod_compare_expression_ui("compare_expression_1", "Bulk"),
