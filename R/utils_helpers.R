@@ -141,14 +141,17 @@ add_palette_from_cache <- function(
 #' Retrieve the most recently saved resource `rname` from the
 #' global cache
 #'
-from_bfc <- function(rname) {
+from_bfc <- function(rname, as_row = FALSE) {
   query_res <- BiocFileCache::bfcquery(BFC, rname)
   if (nrow(query_res) > 0) {
-    query_res |>
+    row <- query_res |>
       dplyr::arrange(dplyr::desc(create_time)) |>
-      head(n = 1) |>
-      purrr::pluck("rpath") |>
-      readRDS()
+      head(n = 1)
+    if (as_row) {
+      row
+    } else {
+      readRDS(row$rpath)
+    }
   }
 }
 
