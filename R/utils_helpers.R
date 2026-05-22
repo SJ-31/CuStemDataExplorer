@@ -53,6 +53,17 @@ random_palette <- function(min_length = NULL, continuous = FALSE) {
   } else if (!is.null(min_length)) {
     choices <- paletteer::palettes_d_names |>
       dplyr::filter(length >= min_length)
+    if (nrow(choices) == 0) {
+      custom <- c()
+      while (length(custom) < min_length) {
+        pal_group <- sample(names(paletteer::palettes_d), size = 1)
+        colors <- paletteer::palettes_d[[pal_group]] |>
+          sample(size = 1) |>
+          unlist(use.names = FALSE)
+        custom <- c(custom, colors) |> unique()
+      }
+      return(custom)
+    }
   } else {
     choices <- paletteer::palettes_d_names
   }
@@ -70,7 +81,16 @@ random_palette_c <- function() {
   random_palette(continuous = TRUE)
 }
 
-palette_from_cache <- function(key, min_length = NULL, discrete = TRUE) {
+#' Retrieve a palette name from the in-memory cache for plotting consistency
+#'
+#' @description If the key for the palette isn't found in the cache, a new one
+#' is generated and added to the cache. If the cache doesn't exist, simply
+#' return a random palette
+palette_from_cache <- function(
+  key,
+  min_length = NULL,
+  discrete = TRUE
+) {
   if (discrete) {
     fn <- \() random_palette_d(min_length = min_length)
   } else {
@@ -92,6 +112,29 @@ palette_from_cache <- function(key, min_length = NULL, discrete = TRUE) {
     }
   } else {
     fn()
+  }
+}
+
+add_palette_from_cache <- function(
+  plot,
+  key,
+  min_length = NULL,
+  fill = FALSE,
+  discrete = TRUE
+) {
+  pal <- palette_from_cache(key, min_length, discrete)
+  if (length(pal) > 1 && fill) {
+    plot + ggplot2::scale_fill_discrete(pal)
+  } else if (length(pal) > 1) {
+    plot + ggplot2::scale_color_discrete(pal)
+  } else if (discrete && fill) {
+    plot + paletteer::scale_fill_paletteer_d(pal)
+  } else if (discrete) {
+    plot + paletteer::scale_color_paletteer_d(pal)
+  } else if (fill) {
+    plot + paletteer::scale_fill_paletteer_c(pal)
+  } else {
+    plot + paletteer::scale_color_paletteer_c(pal)
   }
 }
 

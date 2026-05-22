@@ -213,11 +213,16 @@ tmm_normalize <- function(obj, log = TRUE) {
 }
 
 label_theming <- function(plot, palette, legend) {
-  plot +
+  plot <- plot +
     ggplot2::geom_tile() +
-    paletteer::scale_fill_paletteer_d(palette) +
     ggplot2::theme_void() +
     ggplot2::guides(fill = ggplot2::guide_legend(legend))
+  if (length(palette) > 1) {
+    plot + ggplot2::scale_fill_discrete(palette = palette)
+  } else {
+    plot + paletteer::scale_fill_paletteer_d(palette)
+  }
+}
 }
 
 
