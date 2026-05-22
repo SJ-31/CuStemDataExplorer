@@ -223,15 +223,54 @@ label_theming <- function(plot, palette, legend) {
     plot + paletteer::scale_fill_paletteer_d(palette)
   }
 }
+
+do_expr_plot_grouped <- function(long, group_by, genes) {
+  box::use(
+    ggplot2[aes, theme, element_blank, ggplot]
+  )
+
+  checkmate::assert_choice(group_by, c("tumor_type", "cohort"))
+  if (group_by == "tumor_type") {
+    fill <- "cohort"
+  } else {
+    fill <- "tumor_type"
+  }
+  n_fill <- length(unique(long[[fill]]))
+  plot <- ggplot2::ggplot(
+    long,
+    aes(x = !!as.symbol(group_by), y = value, fill = !!as.symbol(fill))
+  ) +
+    ggplot2::geom_boxplot() +
+    ggplot2::ylab("Normalized expression") +
+    ggplot2::xlab(prettify_text(group_by)) +
+    ggplot2::guides(fill = ggplot2::guide_legend(title = prettify_text(fill)))
+  if (length(genes) >= 2) {
+    plot <- plot + ggplot2::facet_wrap(~gene_id)
+  }
+
+  plot |>
+    add_palette_from_cache(
+      key = "bulk_expression_boxplot",
+      min_length = n_fill,
+      fill = TRUE,
+      discrete = TRUE
+    )
 }
 
 
-do_heatmap <- function(
+#' Main entry point
+#'
+#' @param cfg Configuration for palette
+#' @param tumor_types If not null, restrict the plot to samples of these tumor
+#' types
+#' @param cohorts If not null, restrict the plot to samples of these cohorts
+do_expr_plot <- function(
   expr_tbs,
   genes,
   cfg,
   tumor_types = NULL,
-  cohorts = NULL
+  cohorts = NULL,
+  group_by = NULL
 ) {
   box::use(
     ggplot2[aes, theme, element_blank, geom_tile, ggplot],
@@ -244,6 +283,9 @@ do_heatmap <- function(
     filter(gene_id %in% genes) |>
     tidyr::pivot_longer(-gene_id, names_to = "sample") |>
     dplyr::left_join(expr_tbs$meta, by = dplyr::join_by(sample))
+  if (group_by != "none") {
+    return(do_expr_plot_grouped(long, group_by, genes))
+  }
   meta <- expr_tbs$meta
   if (!is.null(tumor_types)) {
     long <- filter(long, tumor_type %in% tumor_types)
@@ -266,15 +308,21 @@ do_heatmap <- function(
     axis.title.x = ggplot2::element_text(size = 15)
   )
 
-  expr_plot <- ggplot(
-    long,
-    aes(x = sample, y = gene_id, fill = value)
-  ) +
-    geom_tile(width = 0.90) +
-    theme(panel.grid = element_blank()) +
-    paletteer::scale_fill_paletteer_c(expr_palette) +
-    ggplot2::guides(fill = ggplot2::guide_legend("Normalized expression")) +
-    ggplot2::ylab("Gene")
+  if (length(genes) >= 2) {
+    expr_plot <- ggplot(
+      long,
+      aes(x = sample, y = gene_id, fill = value)
+    ) +
+      geom_tile(width = 0.90) +
+      theme(panel.grid = element_blank()) +
+      paletteer::scale_fill_paletteer_c(expr_palette) +
+      ggplot2::guides(fill = ggplot2::guide_legend("Normalized expression")) +
+      ggplot2::ylab("Gene")
+  } else {
+    expr_plot <- ggplot(long, aes(x = sample, y = value)) +
+      ggplot2::geom_bar(stat = "identity") +
+      ggplot2::ylab("Normalized expression")
+  }
 
   plot_list <- list(expr_plot)
 

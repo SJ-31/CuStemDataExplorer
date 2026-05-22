@@ -37,6 +37,16 @@ mod_compare_expression_ui <- function(id, label) {
           multiple = TRUE,
           options = list(items = NULL)
         ),
+        shiny::h4("Aggregation"),
+        shiny::selectInput(
+          ns("group_by"),
+          label = NULL,
+          choices = c(
+            "---" = "none",
+            "Tumor type" = "tumor_type",
+            "Cohort" = "cohort"
+          ),
+        )
       )
     )
   )
@@ -78,17 +88,28 @@ mod_compare_expression_server <- function(id, cached) {
     )
 
     output$expr_comparison <- shiny::renderPlot(
-      do_heatmap(
+      do_expr_plot(
         combined_expr,
         genes = input$gene_selection,
         cfg = cfg$palette %||% list(),
         tumor_types = input$tumor_type,
-        cohorts = input$cohort
+        cohorts = input$cohort,
+        group_by = input$group_by
       ),
       res = 120
     ) |>
-      shiny::bindCache(input$gene_selection, input$tumor_type, input$cohort) |>
-      shiny::bindEvent(input$gene_selection, input$tumor_type, input$cohort)
+      shiny::bindCache(
+        input$gene_selection,
+        input$tumor_type,
+        input$cohort,
+        input$group_by
+      ) |>
+      shiny::bindEvent(
+        input$gene_selection,
+        input$tumor_type,
+        input$cohort,
+        input$group_by
+      )
   })
 }
 
