@@ -20,6 +20,8 @@ Imports:
     edgeR,
     fastmap,
     ggplot2,
+    ggsci,
+    ggthemes,
     glue,
     golem,
     googlesheets4,

@@ -58,12 +58,7 @@ mod_compare_expression_ui <- function(id, label) {
 mod_compare_expression_server <- function(id, cached) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-    if (options()$golem.app.prod) {
-      key <- "default"
-    } else {
-      key <- "dev"
-    }
-    cfg <- get_golem_config("expression_viewer", config = key)
+    cfg <- get_golem_config("expression_viewer")
     combined_expr <- from_bfc(cached)
     gene_ids <- purrr::discard(combined_expr$expr$gene_id, is.na) |>
       `names<-`(NULL)

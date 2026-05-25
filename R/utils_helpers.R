@@ -48,6 +48,8 @@ recode_genes <- function(
 }
 
 random_palette <- function(min_length = NULL, continuous = FALSE) {
+  library(ggthemes)
+  library(ggsci)
   if (continuous) {
     choices <- paletteer::palettes_c_names
   } else if (!is.null(min_length)) {

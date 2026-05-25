@@ -1,5 +1,8 @@
 Bootstrap: docker
 From: rocker/verse:4.6.0
+# Run golem::add_dockerfile_with_renv(open = FALSE, output_dir = "deploy") first
+# to get the app tarball
+
 
 
 %files
