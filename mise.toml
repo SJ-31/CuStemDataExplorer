@@ -1,6 +1,9 @@
 [tasks]
-golem = "Rscript -e 'golem::run_dev()'"
 browse = "firefox http://127.0.0.1:23461/"
+
+[tasks.golem]
+env = { GOLEM_CONFIG_ACTIVE = "dev" }
+run = "Rscript -e 'golem::run_dev()'"
 
 [tasks.get_docker_file]
 shell = "Rscript -e"
@@ -19,16 +22,55 @@ description = "Build docker image"
 depends = ["get_docker_file"]
 dir = "./deploy"
 run = '''
-docker build -f Dockerfile_base --progress=plain -t stemdataexplorer_base .
-docker build -f Dockerfile --progress=plain -t stemdataexplorer:latest .
+docker build -f fixed.dockerfile -t stemdataexplorer:latest .
 '''
+
+[tasks.docker_run]
+run = '''
+docker kill $(docker ps -q) || echo "No running images"
+docker run \
+       -e GOLEM_CONFIG_FILE=/home/stem/config.yml \
+       --mount type=bind,src=$(pwd)/inst/golem-config.yml,dst=/home/stem/config.yml \
+       --mount type=bind,src=$(pwd)/app_cache/cache,dst=/home/stem/app_cache \
+       -p 80:80 \
+       stemdataexplorer:latest
+'''
+# NOTE: [2026-05-25 Mon] switched to using apptainer because intended
+# server doesn't support docker
 
 [tasks.clean]
 run = '''
 if [[ -e "deploy" ]]; then
-   rm -R deploy
+   rm deploy/image.sif
+   rm deploy/renv.lock.prod
+   rm deploy/Dockerfile
+   rm deploy/StemDataExplorer*.tar.gz
+   rm deploy/Dockerfile_base
 fi
 '''
+
+[tasks.apptainer_run]
+env = { GOLEM_CONFIG_ACTIVE = "dev" }
+run = '''
+sudo apptainer instance run \
+          --env GOLEM_CONFIG_FILE=./inst/golem-config.yml \
+          --env GOLEM_CONFIG_ACTIVE=dev \
+          --network-args "portmap=80:80/tcp" \
+          ./deploy/image.sif shiny
+'''
+
+[tasks.apptainer_exec]
+run = '''
+sudo apptainer exec  \
+          --env GOLEFIG_FILE=inst/golem-config.yml \
+          --env GOLEM_CONFIG_ACTIVE=dev \
+          --net \
+          --network-args "portmap=8080:80/tcp" \
+          ./deploy/image.sif \
+          R -e "options('shiny.port'=80,shiny.host='0.0.0.0');library(StemDataExplorer);StemDataExplorer::run_app()"
+'''
+# View with firefox http://0.0.0.0:8080
+
 
 [tasks.set_up_dev]
 usage = '''
@@ -40,4 +82,12 @@ if [[ "${usage_remove}" == "true" ]]; then
 else
    Rscript inst/set_up.R -f inst/golem-config.yml -c dev
 fi
+'''
+
+[tasks.apptainer_build]
+dir = "./deploy"
+depends = ["get_docker_file"]
+run = '''
+export APPTAINER_TMPDIR=/home/shannc/Bio_SDD/build
+apptainer build --force image.sif image.def
 '''
