@@ -10,7 +10,7 @@ shell = "Rscript -e"
 run = '''
 golem::add_dockerfile_with_renv(open = FALSE, output_dir = "deploy")
 '''
-sources = ["DESCRIPTION", "R/*"]
+sources = ["R/*"]
 outputs = [
   "deploy/Dockerfile",
   "deploy/renv.lock.prod",
