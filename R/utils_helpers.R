@@ -14,7 +14,7 @@ bool_col <- reactable::colDef(
   filterInput = select_filter,
   align = "center",
   cell = \(v) {
-    if (v == "F") "\u274c" else "\u2714\ufe0f"
+    if (v) "\u274c" else "\u2714\ufe0f"
   }
 )
 
