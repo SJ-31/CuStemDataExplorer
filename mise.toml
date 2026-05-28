@@ -61,15 +61,13 @@ sudo apptainer instance run \
 
 [tasks.apptainer_exec]
 run = '''
-sudo apptainer exec  \
-          --env GOLEFIG_FILE=inst/golem-config.yml \
+apptainer exec  \
+          --env GOLEM_CONFIG_FILE=inst/golem-config.yml \
           --env GOLEM_CONFIG_ACTIVE=dev \
-          --net \
-          --network-args "portmap=8080:80/tcp" \
           ./deploy/image.sif \
-          R -e "options('shiny.port'=80,shiny.host='0.0.0.0');library(StemDataExplorer);StemDataExplorer::run_app()"
+          R -e "options('shiny.port'=8888,shiny.host='0.0.0.0');library(StemDataExplorer);StemDataExplorer::run_app()"
 '''
-# View with firefox http://0.0.0.0:8080
+# View with firefox http://0.0.0.0:8888
 
 
 [tasks.set_up_dev]
@@ -87,7 +85,18 @@ fi
 [tasks.apptainer_build]
 dir = "./deploy"
 depends = ["get_docker_file"]
+sources = ["deploy/image.def"]
 run = '''
 export APPTAINER_TMPDIR=/home/shannc/Bio_SDD/build
-apptainer build --force image.sif image.def
+apptainer build --force \
+          -B ~/.cache/R/renv_singularity:/tmp/renv_singularity \
+          image.sif image.def
+'''
+outputs = ["deploy/image.sif"]
+
+[tasks.send]
+run = '''
+rsync deploy/image.sif $stem_ip:~/shiny_test
+rsync inst/golem-config.yml $stem_ip:~/shiny_test
+rsync -r app_cache $stem_ip:~/shiny_test/app_cache
 '''
