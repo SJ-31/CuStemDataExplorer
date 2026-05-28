@@ -100,3 +100,12 @@ rsync deploy/image.sif $stem_ip:~/shiny_test
 rsync inst/golem-config.yml $stem_ip:~/shiny_test
 rsync -r app_cache $stem_ip:~/shiny_test/app_cache
 '''
+
+[tasks.get_sample_sheet_nas]
+run = '''
+rsync stem_cell_admin@10.39.181.155:~/files.txt .
+python inst/get_sample_catalog.py -i files.txt \
+       -r /volume1/cancer_ngs \
+       -o inst/tmp/sample_catalog.csv
+rm files.txt
+'''

@@ -10,9 +10,6 @@ from typing import Iterable
 RAW_EXTS = [".fastq.gz", ".fasta", ".fq.gz", ".tar"]
 RAW_REGEXPS = {"normal": ".*_B(_[0-9]+)?$", "tumor": ".*[_-]T?C([_-][0-9]+)?$"}
 
-file = "/home/shannc/Downloads/files.txt"
-root = Path("/volume1/cancer_ngs")
-
 
 def get_group_key(path: Path):
     parents = list(path.parents)
@@ -187,9 +184,13 @@ def main(
                         ttype=ttype.name,
                         cohort=cohort.name,
                     )
+                    path = f"{modality.stem}/{ttype.stem}/{cohort.stem}/{sample.stem}"
                     if isinstance(rec, dict):
                         rows.append(rec)
+                        rec["path"] = path
                     else:
+                        for dct in rec:
+                            dct["path"] = path
                         rows.extend(rec)
     return rows
 
@@ -264,8 +265,9 @@ if __name__ == "__main__":
         writer = DictWriter(
             f,
             fieldnames=[
-                "case_name",
                 "cohort",
+                "case_name",
+                "path",
                 "tumor_type",
                 "modality",
                 "has_pbmc",
