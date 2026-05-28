@@ -43,9 +43,7 @@ if (sys.nframe() == 0) {
     default = FALSE
   )
   args <- parse_args(parser)
-  cfg <- config::get(file = args$file, config = "default")
-  cfg_ext <- config::get(file = args$file, config = args$config)
-  cfg <- config::merge(cfg, cfg_ext)
+  cfg <- config::get(file = args$file, config = args$config)
   if (args$remove) {
     BiocFileCache::removebfc(
       BiocFileCache::BiocFileCache(cfg$cache),

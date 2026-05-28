@@ -2,8 +2,11 @@ rename_df <- function(df) {
   lookup <- c(
     Case = "case_name",
     Path = "path",
+    `N biopsies` = "n_biopsies",
     PBMC = "has_pbmc",
     Tumor = "has_tumor",
+    `Processed files` = "processed_files",
+    Warnings = "warnings",
     Raw = "has_raw",
     Processed = "has_processed",
     Modality = "modality",
@@ -21,7 +24,10 @@ rename_df <- function(df) {
 
 read_from_other <- function(link, sheet_name, grouped_sample_df) {
   googlesheets4::read_sheet(link, sheet = sheet_name) |>
-    dplyr::mutate(tumor_type = stringr::str_to_upper(tumor_type)) |>
+    dplyr::mutate(
+      tumor_type = stringr::str_to_upper(tumor_type),
+      case_name = dplyr::first(case_name),
+    ) |>
     dplyr::left_join(
       grouped_sample_df,
       by = c(
@@ -41,11 +47,17 @@ read_from_other <- function(link, sheet_name, grouped_sample_df) {
 #' @return A list of tibbles containing the sample data
 #'
 #' @noRd
-get_sheets <- function() {
+get_sheets <- function(cfg) {
   data <- list()
-  sheets <- get_golem_config("data_sheets")
+  sheets <- cfg$data_sheets
   other_sheet <- sheets$other
-  df <- googlesheets4::read_sheet(sheets$samples) |>
+  if (file.exists(sheets$samples)) {
+    logger::log_info("Reading from on-disk sample sheet")
+    sample_sheet <- readr::read_csv(sheets$samples)
+  } else {
+    sample_sheet <- googlesheets4::read_sheet(sheets$samples)
+  }
+  df <- sample_sheet |>
     dplyr::mutate(
       tumor_type = stringr::str_to_upper(tumor_type),
       modality = dplyr::replace_values(
@@ -57,7 +69,6 @@ get_sheets <- function() {
         "tcr_seq" ~ "TCR seq"
       ),
     ) |>
-    dplyr::select(-date_received) |>
     dplyr::relocate(path, .after = dplyr::everything())
   grouped <- df |>
     dplyr::group_by(cohort, case_name, tumor_type) |>
