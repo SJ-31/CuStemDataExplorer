@@ -212,6 +212,30 @@ tmm_normalize <- function(obj, log = TRUE) {
   list(expr = counts, meta = obj$meta)
 }
 
+deseq2_normalize <- function(obj, method = "vst", kws = list()) {
+  checkmate::assert_choice(method, c("vst", "rlog"))
+  if (length(unique(obj$meta$tumor_type)) == 1) {
+    design <- "~ 1"
+  } else {
+    design <- "~ tumor_type"
+  }
+  dds <- DESeq2::DESeqDataSetFromMatrix(
+    countData = tibble::column_to_rownames(obj$expr, var = "gene_id"),
+    colData = obj$meta,
+    design = as.formula(design)
+  )
+  if (method == "vst") {
+    norm <- do.call(\(...) DESeq2::vst(dds, ...), kws)
+  } else if (method == "rlog") {
+    norm <- do.call(\(...) DESeq2::rlog(dds, ...), kws)
+  }
+  expr <- SummarizedExperiment::assay(norm) |>
+    as.data.frame() |>
+    tibble::rownames_to_column(var = "gene_id") |>
+    tibble::as_tibble()
+  list(expr = expr, meta = obj$meta)
+}
+
 label_theming <- function(plot, palette, legend) {
   plot <- plot +
     ggplot2::geom_tile() +

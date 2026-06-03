@@ -160,6 +160,21 @@ from_bfc <- function(rname, as_row = FALSE) {
 set_logger <- function() {
   file <- get_golem_config("log")
   logger::log_appender(logger::appender_tee(file))
+  logger::log_info("Logger set up")
+}
+
+dispatch_normalize <- function(obj) {
+  cfg <- local({
+    tmp <- get_golem_config("expression_viewer") %||% list()
+    tmp$normalization
+  })
+  method <- cfg$method %||% "vst"
+  if (cfg$method == "tmm") {
+    tmm_normalize(obj)
+  } else {
+    kws <- cfg$kws %||% list()
+    deseq2_normalize(obj, method = method, kws = kws)
+  }
 }
 
 
