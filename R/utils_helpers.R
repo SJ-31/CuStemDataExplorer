@@ -144,7 +144,7 @@ add_palette_from_cache <- function(
 #' global cache
 #'
 from_bfc <- function(rname, as_row = FALSE) {
-  query_res <- BiocFileCache::bfcquery(BFC, rname)
+  query_res <- BiocFileCache::bfcquery(BFC, rname, exact = TRUE)
   if (nrow(query_res) > 0) {
     row <- query_res |>
       dplyr::arrange(dplyr::desc(create_time)) |>

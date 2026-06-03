@@ -8,9 +8,7 @@ main <- function(cfg) {
   cache <- cachem::cache_mem()
   specs <- get_cache_spec(cfg, cache)
   for (spec in specs) {
-    exact_lookup <- bfcquery(bfc, spec$name) |>
-      dplyr::filter(rname == spec$name)
-    if (nrow(exact_lookup) > 0) {
+    if (nrow(bfcquery(bfc, spec$name, exact = TRUE)) > 0) {
       message(glue("Object `{spec$name}` found in cache already, skipping..."))
     } else {
       obj <- spec$fn()
