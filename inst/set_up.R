@@ -5,9 +5,12 @@ devtools::load_all()
 main <- function(cfg) {
   box::use(BiocFileCache[BiocFileCache, bfcnew, bfcquery], glue[glue])
   bfc <- BiocFileCache(cfg$cache)
-  specs <- get_cache_spec(cfg)
+  cache <- cachem::cache_mem()
+  specs <- get_cache_spec(cfg, cache)
   for (spec in specs) {
-    if (nrow(bfcquery(bfc, spec$name)) > 0) {
+    exact_lookup <- bfcquery(bfc, spec$name) |>
+      dplyr::filter(rname == spec$name)
+    if (nrow(exact_lookup) > 0) {
       message(glue("Object `{spec$name}` found in cache already, skipping..."))
     } else {
       obj <- spec$fn()

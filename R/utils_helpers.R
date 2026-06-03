@@ -171,26 +171,49 @@ set_logger <- function() {
 #' fn: a function of no arguments that returns the object to cache
 #' usage: string listing the modules, features the object is required by.
 #'      for logging and debugging purposes when the cache is empty
-get_cache_spec <- function(cfg = NULL) {
+get_cache_spec <- function(cfg = NULL, cache) {
   list(
     list(
       name = "sheets",
-      fn = get_sheets,
+      fn = \() get_sheets(cfg),
       usage = "Clinical, metadata, and sample tabs"
+    ),
+    list(
+      name = "raw_bulk_expression",
+      fn = \() {
+        data <- read_all_expr(
+          cfg$expression_viewer,
+          allowed_exts = c("csv", "tsv")
+        )
+        cache$set("raw_bulk_expr", data)
+        data
+      },
+      usage = "DE analysis"
     ),
     list(
       name = "bulk_expression",
       fn = \() {
-        read_all_expr(cfg$expression_viewer, allowed_exts = c("csv", "tsv")) |>
-          tmm_normalize()
+        norm <- dispatch_normalize(cache$get("raw_bulk_expr"))
+        cache$remove("raw_bulk_expr")
+        norm
       },
       usage = "Bulk expression comparison"
     ),
     list(
+      name = "sc_pseudobulk_expression_raw",
+      fn = \() {
+        data <- read_all_expr(cfg$expression_viewer, allowed_exts = "h5ad")
+        cache$set("single_cell_expr", data)
+        data
+      },
+      usage = "Single-cell DE analysis"
+    ),
+    list(
       name = "sc_pseudobulk_expression",
       fn = \() {
-        read_all_expr(cfg$expression_viewer, allowed_exts = "h5ad") |>
-          tmm_normalize()
+        norm <- cache$get("single_cell_expr") |> dispatch_normalize()
+        cache$remove("single_cell_expr")
+        norm
       },
       usage = "Single-cell pseudobulk expression comparison"
     )
