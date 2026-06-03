@@ -11,10 +11,10 @@ app_server <- function(input, output, session) {
   mod_metadata_server("metadata_1", SHEETS)
   mod_compare_expression_server(
     "compare_expression_1",
-    cached = "^bulk_expression"
+    cached = "bulk_expression"
   )
   mod_compare_expression_server(
     "compare_expression_2",
-    cached = "^sc_pseudobulk_expression"
+    cached = "sc_pseudobulk_expression"
   )
 }
