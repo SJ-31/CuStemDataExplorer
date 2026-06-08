@@ -2,7 +2,7 @@
 
 devtools::load_all()
 
-main <- function(cfg) {
+main <- function(cfg, force_update = NULL) {
   box::use(BiocFileCache[BiocFileCache, bfcnew, bfcquery], glue[glue])
   bfc <- BiocFileCache(cfg$cache)
   cache <- cachem::cache_mem()
@@ -10,10 +10,14 @@ main <- function(cfg) {
   for (spec in specs) {
     if (nrow(bfcquery(bfc, spec$name, exact = TRUE)) > 0) {
       message(glue("Object `{spec$name}` found in cache already, skipping..."))
+      obj <- from_bfc(q = spec$name, bfc = bfc)
     } else {
       obj <- spec$fn()
       file_path <- bfcnew(bfc, spec$name, ext = ".rds")
       saveRDS(obj, file_path)
+    }
+    if (!is.null(spec$cache)) {
+      cache$set(spec$cache, obj)
     }
   }
 }

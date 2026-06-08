@@ -143,8 +143,8 @@ add_palette_from_cache <- function(
 #' Retrieve the most recently saved resource `rname` from the
 #' global cache
 #'
-from_bfc <- function(q, as_row = FALSE) {
-  query_res <- BiocFileCache::bfcquery(BFC, q) |>
+from_bfc <- function(q, as_row = FALSE, bfc = BFC) {
+  query_res <- BiocFileCache::bfcquery(bfc, q) |>
     dplyr::filter(rname == q)
   if (nrow(query_res) > 0) {
     row <- query_res |>
@@ -197,14 +197,25 @@ get_cache_spec <- function(cfg = NULL, cache) {
     list(
       name = "raw_bulk_expression",
       fn = \() {
-        data <- read_all_expr(
+        read_all_expr(
           cfg$expression_viewer,
           allowed_exts = c("csv", "tsv")
         )
-        cache$set("raw_bulk_expr", data)
-        data
       },
-      usage = "DE analysis"
+      usage = "DE analysis",
+      cache = "raw_bulk_expr"
+    ),
+    list(
+      name = "bulk_de",
+      fn = \() {
+        cur_cfg <- cfg$bulk_de %||% list()
+        do_de(
+          obj = cache$get("raw_bulk_expr"),
+          how = cur_cfg$how %||% "deseq2",
+          kws = cur_cfg$kws %||% list()
+        )
+      },
+      usage = "DE viewer"
     ),
     list(
       name = "bulk_expression",
@@ -217,11 +228,8 @@ get_cache_spec <- function(cfg = NULL, cache) {
     ),
     list(
       name = "sc_pseudobulk_expression_raw",
-      fn = \() {
-        data <- read_all_expr(cfg$expression_viewer, allowed_exts = "h5ad")
-        cache$set("single_cell_expr", data)
-        data
-      },
+      fn = \() read_all_expr(cfg$expression_viewer, allowed_exts = "h5ad"),
+      cache = "single_cell_expr",
       usage = "Single-cell DE analysis"
     ),
     list(
