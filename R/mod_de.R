@@ -62,7 +62,8 @@ mod_de_server <- function(id, cached) {
       } else {
         con <- dbs$pairwise
       }
-      df <- dbGetQuery(con, glue("SELECT * FROM '{contrast}'"))
+      df <- dbGetQuery(con, glue("SELECT * FROM '{contrast}'")) |>
+        dplyr::arrange(log2FoldChange)
       if (!is.null(indices)) {
         df[indices, ]
       } else {
@@ -70,10 +71,20 @@ mod_de_server <- function(id, cached) {
       }
     }
 
+    to_numeric <- c("stat", "pvalue", "lfcSE", "baseMean", "log2FoldChange")
+    de_col_format <- lapply(
+      rep(1, length(to_numeric)),
+      \(x) {
+        reactable::colDef(format = reactable::colFormat(digits = 3))
+      }
+    ) |>
+      `names<-`(to_numeric)
+
     shiny::updateSelectizeInput(
       session,
       "contrast",
       choices = all_contrasts,
+      selected = all_contrasts[1],
       server = TRUE
     )
     ## selection <- reactable::getReactableState(
@@ -96,7 +107,9 @@ mod_de_server <- function(id, cached) {
       get_contrast(
         input$contrast
       ),
-      columns = list()
+      columns = de_col_format,
+      selection = "multiple",
+      searchable = TRUE
     )) |>
       shiny::bindCache(input$contrast) |>
       shiny::bindEvent(input$contrast)
