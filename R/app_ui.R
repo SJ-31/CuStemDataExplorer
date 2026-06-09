@@ -26,12 +26,13 @@ app_ui <- function(request) {
         mod_samples_ui("samples_1", sheet_sidebar),
       ),
       bslib::nav_menu(
-        "Gene expression",
-        mod_compare_expression_ui("compare_expression_1", "Bulk"),
+        "RNA-seq",
+        mod_compare_expression_ui("compare_expression_1", "Expression: Bulk"),
         mod_compare_expression_ui(
           "compare_expression_2",
-          "Single-cell (pseudobulk)"
-        )
+          "Expression: Single-cell (pseudobulk)"
+        ),
+        mod_de_ui("de_1", "DE Analysis: Bulk")
       ),
       theme = bslib::bs_theme(bootswatch = "flatly"),
     )

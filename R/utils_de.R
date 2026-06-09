@@ -13,7 +13,7 @@ deseq_ovr_contrasts <- function(factor, dds) {
     contrast <- rep(0, length(all_levels))
     contrast[str_starts(all_levels, factor)] <- 1 / (n_levels - 1)
     contrast[which(all_levels == l)] <- -1
-    results(dds, contrast = contrast)
+    DESeq2::results(dds, contrast = contrast)
   }) |>
     `names<-`(glue::glue("{removed} vs. Rest"))
 }
@@ -32,7 +32,7 @@ deseq_pairwise_contrasts <- function(factor, dds) {
 
 deseq_wrapper <- function(obj, kws) {
   dds <- DESeq2::DESeqDataSetFromMatrix(
-    countData = column_to_rownames(obj$expr, var = "gene_id"),
+    countData = tibble::column_to_rownames(obj$expr, var = "gene_id"),
     colData = obj$meta,
     # TODO: include batch as well
     # TODO: read up about the different ways to parameterize, including
@@ -47,8 +47,29 @@ deseq_wrapper <- function(obj, kws) {
 
 do_de <- function(obj, how = "deseq2", kws) {
   if (how == "deseq2") {
-    deseq2_wrapper(obj, kws)
+    deseq_wrapper(obj, kws)
   } else {
     stop("Not implemented yet")
   }
+}
+
+
+volcano_plot <- function(obj, p_threshold = 0.05) {
+  if (!is.data.frame(obj)) {
+    tb <- obj |>
+      as.data.frame() |>
+      tibble::rownames_to_column(var = "gene_id")
+  } else {
+    tb <- obj
+  }
+  print(colnames(tb))
+  if ("is_sig" %notin% colnames(tb)) {
+    tb$is_sig <- tb$padj < p_threshold
+  }
+  ggplot2::ggplot(
+    tb,
+    ggplot2::aes(x = log2FoldChange, y = -log(padj), color = is_sig)
+  ) +
+    ggplot2::geom_point() +
+    ggplot2::guides(color = ggplot2::guide_legend(title = "Significant"))
 }
