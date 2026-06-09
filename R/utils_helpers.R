@@ -143,7 +143,7 @@ add_palette_from_cache <- function(
 #' Retrieve the most recently saved resource `rname` from the
 #' global cache
 #'
-from_bfc <- function(q, as_row = FALSE, bfc = BFC) {
+from_bfc <- function(q, as_row = FALSE, bfc = BFC, read = TRUE) {
   query_res <- BiocFileCache::bfcquery(bfc, q) |>
     dplyr::filter(rname == q)
   if (nrow(query_res) > 0) {
@@ -152,8 +152,12 @@ from_bfc <- function(q, as_row = FALSE, bfc = BFC) {
       head(n = 1)
     if (as_row) {
       row
-    } else {
+    } else if (read && stringr::str_ends(row$rpath, ".rds")) {
       readRDS(row$rpath)
+    } else if (read && stringr::str_ends(row$rpath, ".db")) {
+      duckdb::dbConnect(duckdb::duckdb(), dbdir = row$rpath)
+    } else {
+      row$rpath
     }
   }
 }
@@ -178,15 +182,6 @@ dispatch_normalize <- function(obj) {
   }
 }
 
-
-#' List of objects to cache and how
-#'
-#' @description
-#' Each element of this list must be a list with three keys:
-#' name: the name of the key used to cache the object
-#' fn: a function of no arguments that returns the object to cache
-#' usage: string listing the modules, features the object is required by.
-#'      for logging and debugging purposes when the cache is empty
 
 get_validate_cache <- function() {
   cache_path <- get_golem_config("cache")

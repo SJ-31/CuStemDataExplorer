@@ -31,26 +31,38 @@ mod_de_ui <- function(id, label) {
 #'
 #' @noRd
 mod_de_server <- function(id, cached) {
-  box::use(reactable[colDef, colFormat, reactable])
+  box::use(
+    reactable[colDef, colFormat, reactable],
+    glue[glue],
+    DBI[dbGetQuery]
+  )
 
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     cfg <- get_golem_config("de_viewer")
     # [2026-06-08 Mon] TODO: don't wanna have to read everything in...
     # is there a better way?
-    de_results <- from_bfc(cached)
-    all_contrasts <- c(names(de_results$ovr), names(de_results$pairwise)) |>
+    keys <- from_bfc(cached)
+    dbs <- list(
+      ovr = from_bfc(keys$ovr),
+      pairwise = from_bfc(keys$pairwise)
+    )
+
+    table_lookup <- "SELECT * FROM INFORMATION_SCHEMA.TABLES"
+
+    all_contrasts <- c(
+      dbGetQuery(dbs$ovr, table_lookup)$table_name,
+      dbGetQuery(dbs$pairwise, table_lookup)$table_name
+    ) |>
       sort()
 
     get_contrast <- function(contrast, indices = NULL) {
-      if (contrast %in% names(de_results$ovr)) {
-        df <- de_results$ovr[[contrast]]
+      if (stringr::str_ends(contrast, "vs. Rest")) {
+        con <- dbs$ovr
       } else {
-        df <- de_results$pairwise[[contrast]]
+        con <- dbs$pairwise
       }
-      df <- df |>
-        as.data.frame() |>
-        tibble::rownames_to_column(var = "gene")
+      df <- dbGetQuery(con, glue("SELECT * FROM '{contrast}'"))
       if (!is.null(indices)) {
         df[indices, ]
       } else {

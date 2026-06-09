@@ -27,7 +27,13 @@ get_cache_spec <- function(cfg = NULL, cache, bfc) {
     list(
       name = "bulk_de",
       fn = \() {
-        cache_de_analysis(cfg$bulk_de %||% list(), cache, bfc, "raw_bulk_expr")
+        cache_de_analysis(
+          cfg$bulk_de %||% list(),
+          cache = cache,
+          bfc = bfc,
+          cache_key = "raw_bulk_expr",
+          prefix = "bulk_de"
+        )
       },
       usage = "DE viewer"
     ),
@@ -58,25 +64,29 @@ get_cache_spec <- function(cfg = NULL, cache, bfc) {
   )
 }
 
-cache_de_analysis <- function(cfg, cache, bfc, cache_key) {
+cache_de_analysis <- function(cfg, cache, bfc, cache_key, prefix) {
   result <- do_de(
     obj = cache$get(cache_key),
     how = cfg$how %||% "deseq2",
     kws = cfg$kws %||% list()
   )
 
-  mapping <- list(dds = result$dds)
+  dds_name <- paste0(prefix, "::dds")
+  dds_path <- BiocFileCache::bfcnew(bfc, dds_name, ext = ".rds")
+  saveRDS(result$dds, dds_path)
+  mapping <- list(dds = dds_name)
 
   cache_into <- function(subset) {
-    db_file <- BiocFileCache::bfcnew(glue::glue("{cache_key}::{subset}"))
+    name <- paste0(prefix, "::", subset)
+    db_file <- BiocFileCache::bfcnew(bfc, name, ext = ".db")
     con <- duckdb::dbConnect(duckdb::duckdb(), dbdir = db_file)
     for (n in names(result[[subset]])) {
-      df <- result[[subset]][[to_cache]] |>
+      df <- result[[subset]][[n]] |>
         as.data.frame() |>
         tibble::rownames_to_column(var = "gene")
       duckdb::dbWriteTable(con, n, df)
     }
-    mapping[[subset]] <<- db_file
+    mapping[[subset]] <<- name
   }
   cache_into("ovr")
   cache_into("pairwise")
