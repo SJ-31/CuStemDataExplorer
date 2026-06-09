@@ -6,7 +6,7 @@ main <- function(cfg, force_update = NULL) {
   box::use(BiocFileCache[BiocFileCache, bfcnew, bfcquery], glue[glue])
   bfc <- BiocFileCache(cfg$cache)
   cache <- cachem::cache_mem()
-  specs <- get_cache_spec(cfg, cache)
+  specs <- get_cache_spec(cfg, cache, bfc)
   for (spec in specs) {
     if (nrow(bfcquery(bfc, spec$name, exact = TRUE)) > 0) {
       message(glue("Object `{spec$name}` found in cache already, skipping..."))
@@ -41,6 +41,14 @@ if (sys.nframe() == 0) {
   )
   parser <- add_option(
     parser,
+    c("-u", "--force_update"),
+    action = "append",
+    type = "character",
+    help = "Force update the following items in the cache",
+    default = NULL
+  )
+  parser <- add_option(
+    parser,
     c("-r", "--remove"),
     action = "store_true",
     type = "logical",
@@ -54,6 +62,21 @@ if (sys.nframe() == 0) {
       BiocFileCache::BiocFileCache(cfg$cache),
       ask = FALSE
     )
+  } else if (length(args$force_update) > 0) {
+    bfc <- BiocFileCache::BiocFileCache(cfg$cache)
+    for (to_remove in args$force_update) {
+      q <- BiocFileCache::bfcquery(bfc, to_remove, exact = TRUE)
+      if (nrow(q) > 0) {
+        BiocFileCache::bfcremove(bfc, q$rid)
+        sprintf("Removing key `%s`", q)
+      } else {
+        warning(sprintf(
+          "Cannot force-update `%s`, doesn't exist in cache",
+          q
+        ))
+      }
+    }
   }
+
   main(cfg)
 }

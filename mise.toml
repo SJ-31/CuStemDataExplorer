@@ -73,13 +73,17 @@ apptainer exec  \
 [tasks.set_up_dev]
 usage = '''
 flag "--remove" help="Remove old cache" default="false"
+arg "[vals_remove]" help = "Force remove values" var=#true
 '''
 run = '''
 if [[ "${usage_remove}" == "true" ]]; then
    Rscript inst/set_up.R -f inst/golem-config.yml -c dev -r
+elif [[ -n "${usage_vals_remove}" ]]; then
+   Rscript inst/set_up.R -f inst/golem-config.yml -c dev -u "${usage_vals_remove}"   
 else
    Rscript inst/set_up.R -f inst/golem-config.yml -c dev
 fi
+
 '''
 
 [tasks.apptainer_build]
