@@ -187,62 +187,6 @@ dispatch_normalize <- function(obj) {
 #' fn: a function of no arguments that returns the object to cache
 #' usage: string listing the modules, features the object is required by.
 #'      for logging and debugging purposes when the cache is empty
-get_cache_spec <- function(cfg = NULL, cache) {
-  list(
-    list(
-      name = "sheets",
-      fn = \() get_sheets(cfg),
-      usage = "Clinical, metadata, and sample tabs"
-    ),
-    list(
-      name = "raw_bulk_expression",
-      fn = \() {
-        read_all_expr(
-          cfg$expression_viewer,
-          allowed_exts = c("csv", "tsv")
-        )
-      },
-      usage = "DE analysis",
-      cache = "raw_bulk_expr"
-    ),
-    list(
-      name = "bulk_de",
-      fn = \() {
-        cur_cfg <- cfg$bulk_de %||% list()
-        do_de(
-          obj = cache$get("raw_bulk_expr"),
-          how = cur_cfg$how %||% "deseq2",
-          kws = cur_cfg$kws %||% list()
-        )
-      },
-      usage = "DE viewer"
-    ),
-    list(
-      name = "bulk_expression",
-      fn = \() {
-        norm <- dispatch_normalize(cache$get("raw_bulk_expr"))
-        cache$remove("raw_bulk_expr")
-        norm
-      },
-      usage = "Bulk expression comparison"
-    ),
-    list(
-      name = "sc_pseudobulk_expression_raw",
-      fn = \() read_all_expr(cfg$expression_viewer, allowed_exts = "h5ad"),
-      cache = "single_cell_expr",
-      usage = "Single-cell DE analysis"
-    ),
-    list(
-      name = "sc_pseudobulk_expression",
-      fn = \() {
-        norm <- cache$get("single_cell_expr") |> dispatch_normalize()
-        cache$remove("single_cell_expr")
-        norm
-      },
-      usage = "Single-cell pseudobulk expression comparison"
-    )
-  )
-}
 
 get_validate_cache <- function() {
   cache_path <- get_golem_config("cache")
