@@ -1,6 +1,13 @@
+#!/usr/bin/env Rscript
+
 # Gather data resources and store in cache
 
-devtools::load_all()
+if ("StemDataExplorer" %in% rownames(installed.packages())) {
+  library(StemDataExplorer)
+} else {
+  devtools::load_all()
+}
+
 
 main <- function(cfg, force_update = NULL) {
   box::use(BiocFileCache[BiocFileCache, bfcnew, bfcquery], glue[glue])
@@ -30,7 +37,7 @@ if (sys.nframe() == 0) {
     c("-f", "--file"),
     type = "character",
     help = "Configuration file",
-    default = app_sys("golem-config.yml")
+    default = "golem-config.yml"
   )
   parser <- add_option(
     parser,
