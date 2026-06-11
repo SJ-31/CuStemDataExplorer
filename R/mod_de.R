@@ -11,26 +11,32 @@ mod_de_ui <- function(id, label) {
   ns <- NS(id)
   bslib::nav_panel(
     label,
-    bslib::layout_sidebar(
-      shiny::plotOutput(ns("volcano")),
-      reactable::reactableOutput("de_results"),
-      sidebar = bslib::sidebar(
+    bslib::layout_column_wrap(
+      bslib::card(
         shiny::h3("Contrast"),
         shiny::selectizeInput(
           ns("contrast"),
-          label = NULL,
           choices = NULL,
+          label = NULL,
           multiple = FALSE
+        ),
+        reactable::reactableOutput(ns("de_results"))
+      ),
+      bslib::navset_card_tab(
+        bslib::nav_panel("Volcano plot", shiny::plotOutput(ns("volcano"))),
+        bslib::nav_panel(
+          "Scatter plot (for selected gene)",
+          shiny::plotOutput(ns("box_plot"))
         )
       )
-    ),
+    )
   )
 }
 
 #' de Server Functions
 #'
 #' @noRd
-mod_de_server <- function(id, cached) {
+mod_de_server <- function(id, cached, expression_key) {
   box::use(
     reactable[colDef, colFormat, reactable],
     glue[glue],
@@ -40,8 +46,8 @@ mod_de_server <- function(id, cached) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     cfg <- get_golem_config("de_viewer")
-    # [2026-06-08 Mon] TODO: don't wanna have to read everything in...
-    # is there a better way?
+
+    expr <- from_bfc(expression_key)
     keys <- from_bfc(cached)
     dbs <- list(
       ovr = from_bfc(keys$ovr),
@@ -56,14 +62,23 @@ mod_de_server <- function(id, cached) {
     ) |>
       sort()
 
-    get_contrast <- function(contrast, indices = NULL) {
+    get_contrast <- function(contrast, indices = NULL, format = TRUE) {
+      if (nchar(contrast) == 0) {
+        return(data.frame())
+      }
       if (stringr::str_ends(contrast, "vs. Rest")) {
         con <- dbs$ovr
       } else {
         con <- dbs$pairwise
       }
-      df <- dbGetQuery(con, glue("SELECT * FROM '{contrast}'")) |>
-        dplyr::arrange(log2FoldChange)
+      query <- glue("SELECT * FROM '{contrast}' ORDER BY log2FoldChange")
+      df <- dbGetQuery(con, query)
+      if (format) {
+        df <- df |>
+          dplyr::rename(lfc = "log2FoldChange") |>
+          dplyr::relocate(stat, .after = dplyr::everything()) |>
+          dplyr::relocate(padj, .before = pvalue)
+      }
       if (!is.null(indices)) {
         df[indices, ]
       } else {
@@ -71,7 +86,7 @@ mod_de_server <- function(id, cached) {
       }
     }
 
-    to_numeric <- c("stat", "pvalue", "lfcSE", "baseMean", "log2FoldChange")
+    to_numeric <- c("stat", "pvalue", "lfcSE", "baseMean", "lfc")
     de_col_format <- lapply(
       rep(1, length(to_numeric)),
       \(x) {
@@ -87,17 +102,11 @@ mod_de_server <- function(id, cached) {
       selected = all_contrasts[1],
       server = TRUE
     )
-    ## selection <- reactable::getReactableState(
-    ##   "de_results",
-    ##   name = "selected"
-    ## )
+
     output$volcano <- shiny::renderPlot(
       volcano_plot(get_contrast(
         input$contrast,
-        reactable::getReactableState(
-          "de_results",
-          name = "selected"
-        )
+        format = FALSE
       ))
     ) |>
       shiny::bindCache(input$contrast) |>
