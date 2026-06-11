@@ -122,6 +122,22 @@ palette_from_cache <- function(
 }
 
 
+
+#' Prettify text labels for plotting/display purposes
+#'
+#' @description Specific cases are handled by the `mappings` vector, otherwise,
+#'  This function does the following:
+#' - Replaces underscores with space
+#' - Capitalize the first word of the text
+prettify_text <- function(text) {
+  mappings <- c()
+  if (text %in% mappings) {
+    mappings[text]
+  } else {
+    stringr::str_replace_all(text, "_", " ") |> stringr::str_to_sentence()
+  }
+}
+
 add_palette_from_cache <- function(
   plot,
   key,
@@ -166,7 +182,7 @@ from_bfc <- function(q, as_row = FALSE, bfc = BFC, read = TRUE) {
     } else if (read && stringr::str_ends(row$rpath, ".rds")) {
       readRDS(row$rpath)
     } else if (read && stringr::str_ends(row$rpath, ".db")) {
-      duckdb::dbConnect(duckdb::duckdb(), dbdir = row$rpath)
+      duckdb::dbConnect(duckdb::duckdb(), dbdir = row$rpath, read_only = TRUE)
     } else {
       row$rpath
     }
