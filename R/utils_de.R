@@ -62,7 +62,6 @@ volcano_plot <- function(obj, p_threshold = 0.05) {
   } else {
     tb <- obj
   }
-  print(colnames(tb))
   if ("is_sig" %notin% colnames(tb)) {
     tb$is_sig <- tb$padj < p_threshold
   }
@@ -72,4 +71,39 @@ volcano_plot <- function(obj, p_threshold = 0.05) {
   ) +
     ggplot2::geom_point() +
     ggplot2::guides(color = ggplot2::guide_legend(title = "Significant"))
+}
+
+de_scatter_plot <- function(
+  expr_tbs,
+  chosen_genes,
+  contrast,
+  factor = "tumor_type"
+) {
+  splits <- stringr::str_split_1(contrast, "vs.") |>
+    purrr::map_chr(stringr::str_trim)
+  if (length(chosen_genes) > 20) {
+    return("Can plot at most 20 genes")
+  }
+  first <- splits[1]
+  if (splits[2] == "Rest") {
+    filter_by <- unique(expr_tbs$meta[[factor]])
+  } else {
+    filter_by <- c(first, splits[2])
+  }
+  long <- expr_tbs$expr |>
+    dplyr::filter(gene_id %in% chosen_genes) |>
+    tidyr::pivot_longer(-gene_id, names_to = "sample") |>
+    dplyr::left_join(expr_tbs$meta, by = dplyr::join_by(sample)) |>
+    dplyr::filter(!!as.symbol(factor) %in% filter_by)
+
+  # TODO: wanna have the reference level be the first one
+  # TODO: center the jitter points on each box and decrease their widths
+  ggplot2::ggplot(
+    long,
+    ggplot2::aes(x = gene_id, y = value, color = !!as.symbol(factor))
+  ) +
+    ggplot2::geom_boxplot() +
+    ggplot2::geom_jitter() +
+    ggplot2::ylab("Normalized Expression") +
+    ggplot2::xlab("Gene")
 }

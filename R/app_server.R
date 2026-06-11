@@ -17,5 +17,5 @@ app_server <- function(input, output, session) {
     "compare_expression_2",
     cached = "sc_pseudobulk_expression"
   )
-  mod_de_server("de_1", cached = "bulk_de")
+  mod_de_server("de_1", cached = "bulk_de", expression_key = "bulk_expression")
 }
