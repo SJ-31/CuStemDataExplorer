@@ -90,6 +90,7 @@ random_palette_c <- function() {
 #' return a random palette
 palette_from_cache <- function(
   key,
+  key_group,
   min_length = NULL,
   discrete = TRUE
 ) {
@@ -99,32 +100,42 @@ palette_from_cache <- function(
     fn <- random_palette_c
   }
   if (!is.null(min_length)) {
-    key <- glue::glue("palette_{key}_{min_length}")
-  } else {
-    key <- glue::glue("palette_{key}")
+    key <- glue::glue("{key}_{min_length}")
   }
+
   if (exists("CACHE")) {
-    lookup <- CACHE$get(key)
-    if (fastmap::is.key_missing(lookup)) {
+    if (fastmap::is.key_missing(CACHE$get(key_group))) {
+      CACHE$set(key_group, list())
+    }
+    lookup <- CACHE$get(key_group)
+    if (key %notin% names(lookup)) {
       palette <- fn()
-      CACHE$set(key, palette)
+      lookup[[key]] <- palette
+      CACHE$set(key_group, lookup)
       palette
     } else {
-      lookup
+      lookup[[key]]
     }
   } else {
     fn()
   }
 }
 
+
 add_palette_from_cache <- function(
   plot,
   key,
+  key_group,
   min_length = NULL,
   fill = FALSE,
   discrete = TRUE
 ) {
-  pal <- palette_from_cache(key, min_length, discrete)
+  pal <- palette_from_cache(
+    key,
+    key_group = key_group,
+    min_length = min_length,
+    discrete = discrete
+  )
   if (length(pal) > 1 && fill) {
     plot + ggplot2::scale_fill_discrete(pal)
   } else if (length(pal) > 1) {
