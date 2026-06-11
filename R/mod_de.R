@@ -118,10 +118,27 @@ mod_de_server <- function(id, cached, expression_key) {
       ),
       columns = de_col_format,
       selection = "multiple",
-      searchable = TRUE
+      searchable = TRUE,
+      onClick = "select"
     )) |>
       shiny::bindCache(input$contrast) |>
       shiny::bindEvent(input$contrast)
+
+    chosen_genes <- reactive({
+      index <- reactable::getReactableState(
+        "de_results",
+        name = "selected"
+      )
+      get_contrast(input$contrast, indices = index)$gene
+    })
+    output$box_plot <- shiny::renderPlot(de_scatter_plot(
+      expr_tbs = expr,
+      chosen_genes = chosen_genes(),
+      contrast = input$contrast,
+      factor = "tumor_type"
+    )) |>
+      shiny::bindCache(input$contrast, chosen_genes()) |>
+      shiny::bindEvent(input$contrast, chosen_genes())
   })
 }
 
