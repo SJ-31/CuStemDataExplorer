@@ -92,7 +92,8 @@ palette_from_cache <- function(
   key,
   key_group,
   min_length = NULL,
-  discrete = TRUE
+  discrete = TRUE,
+  reset = FALSE
 ) {
   if (discrete) {
     fn <- \() random_palette_d(min_length = min_length)
@@ -108,7 +109,7 @@ palette_from_cache <- function(
       CACHE$set(key_group, list())
     }
     lookup <- CACHE$get(key_group)
-    if (key %notin% names(lookup)) {
+    if (key %notin% names(lookup) || reset) {
       palette <- fn()
       lookup[[key]] <- palette
       CACHE$set(key_group, lookup)
@@ -122,6 +123,36 @@ palette_from_cache <- function(
 }
 
 
+update_palette_input <- function(session, input, input_id, key_group) {
+  keys <- names(CACHE$get(key_group))
+  previous <- input[[input_id]]
+  vals_valid <- purrr::map_lgl(previous, \(x) x %in% keys) |> all()
+  if (!vals_valid || is.null(previous)) {
+    shiny::updateSelectizeInput(
+      session = session,
+      inputId = input_id,
+      choices = keys,
+      server = TRUE
+    )
+  }
+}
+
+randomize_palette <- function(
+  keys,
+  key_group,
+  discrete = TRUE,
+  min_length = NULL
+) {
+  for (k in keys) {
+    . <- palette_from_cache(
+      k,
+      key_group,
+      min_length = min_length,
+      discrete = discrete,
+      reset = TRUE
+    )
+  }
+}
 
 #' Prettify text labels for plotting/display purposes
 #'

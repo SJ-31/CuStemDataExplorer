@@ -46,7 +46,15 @@ mod_compare_expression_ui <- function(id, label) {
             "Tumor type" = "tumor_type",
             "Cohort" = "cohort"
           ),
-        )
+        ),
+        shiny::h4("Reset palettes"),
+        shiny::selectizeInput(
+          ns("palette_choices"),
+          label = NULL,
+          choices = NULL,
+          multiple = TRUE
+        ),
+        shiny::actionButton(ns("reset_palette"), "Reset")
       )
     )
   )
@@ -82,28 +90,52 @@ mod_compare_expression_server <- function(id, cached) {
       server = TRUE
     )
 
+    shiny::observe(randomize_palette(
+      input$palette_choices,
+      key_group = cached
+    )) |>
+      shiny::bindEvent(input$reset_palette)
+
+    cur_palettes <- shiny::reactiveVal(rlang::hash(CACHE$get(cached)))
+    shiny::observeEvent(input$reset_palette, {
+      new <- rlang::hash(CACHE$get(cached))
+      cur_palettes(new)
+    })
+
     output$expr_comparison <- shiny::renderPlot(
-      do_expr_plot(
-        combined_expr,
-        genes = input$gene_selection,
-        cfg = cfg$palette %||% list(),
-        tumor_types = input$tumor_type,
-        cohorts = input$cohort,
-        group_by = input$group_by
-      ),
+      {
+        input$reset_palette
+        update_palette_input(
+          session,
+          input,
+          "palette_choices",
+          key_group = cached
+        )
+        do_expr_plot(
+          combined_expr,
+          genes = input$gene_selection,
+          cfg = cfg$palette %||% list(),
+          tumor_types = input$tumor_type,
+          key_group = cached,
+          cohorts = input$cohort,
+          group_by = input$group_by
+        )
+      },
       res = 120
     ) |>
       shiny::bindCache(
         input$gene_selection,
         input$tumor_type,
         input$cohort,
-        input$group_by
+        input$group_by,
+        cur_palettes()
       ) |>
       shiny::bindEvent(
         input$gene_selection,
         input$tumor_type,
         input$cohort,
-        input$group_by
+        input$group_by,
+        cur_palettes()
       )
   })
 }
