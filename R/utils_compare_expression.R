@@ -248,7 +248,7 @@ label_theming <- function(plot, palette, legend) {
   }
 }
 
-do_expr_plot_grouped <- function(long, group_by, genes) {
+do_expr_plot_grouped <- function(long, group_by, genes, key_group) {
   box::use(
     ggplot2[aes, theme, element_blank, ggplot]
   )
@@ -274,7 +274,8 @@ do_expr_plot_grouped <- function(long, group_by, genes) {
 
   plot |>
     add_palette_from_cache(
-      key = "bulk_expression_boxplot",
+      key = group_by,
+      key_group = key_group,
       min_length = n_fill,
       fill = TRUE,
       discrete = TRUE
@@ -292,6 +293,7 @@ do_expr_plot <- function(
   expr_tbs,
   genes,
   cfg,
+  key_group,
   tumor_types = NULL,
   cohorts = NULL,
   group_by = NULL
@@ -308,7 +310,12 @@ do_expr_plot <- function(
     tidyr::pivot_longer(-gene_id, names_to = "sample") |>
     dplyr::left_join(expr_tbs$meta, by = dplyr::join_by(sample))
   if (group_by != "none") {
-    return(do_expr_plot_grouped(long, group_by, genes))
+    return(do_expr_plot_grouped(
+      long,
+      group_by,
+      genes,
+      key_group = paste0(key_group, "_grouped")
+    ))
   }
   meta <- expr_tbs$meta
   if (!is.null(tumor_types)) {
@@ -361,7 +368,11 @@ do_expr_plot <- function(
     legend_display <- names(labels_to_add[i])
     n_labels <- length(unique(long[[label_col]]))
     if (n_labels > 1) {
-      palette <- palette_from_cache(key = label_col, min_length = n_labels)
+      palette <- palette_from_cache(
+        key = label_col,
+        key_group = key_group,
+        min_length = n_labels
+      )
       plot_list[[length(plot_list) + 1]] <- ggplot(
         meta,
         aes(x = sample, fill = !!as.symbol(label_col), y = "1")
