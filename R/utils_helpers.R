@@ -88,6 +88,13 @@ random_palette_c <- function() {
 #' @description If the key for the palette isn't found in the cache, a new one
 #' is generated and added to the cache. If the cache doesn't exist, simply
 #' return a random palette
+#' The palette cache is implemented as a list accessed from the global
+#' cache via `key_group`.
+#' @param key_group Name in global cache used to store current set
+#' of palettes e.g. the unique name of the plot
+#' @param key Name in `key_group` to store the palette under e.g.
+#' the variable being colored
+#' @param discrete Whether to get discrete colors
 palette_from_cache <- function(
   key,
   key_group,

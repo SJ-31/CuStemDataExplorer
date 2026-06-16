@@ -8,11 +8,16 @@
 #'
 #' @importFrom shiny NS tagList
 mod_compare_expression_ui <- function(id, label) {
+  box::use(bslib[nav_panel])
+
   ns <- NS(id)
   bslib::nav_panel(
     label,
     bslib::layout_sidebar(
-      shiny::plotOutput(ns("expr_comparison")),
+      bslib::navset_card_tab(
+        nav_panel("Heatmap", shiny::plotOutput(ns("expr_comparison"))),
+        nav_panel("PCA", shiny::plotOutput(ns("pca")))
+      ),
       sidebar = bslib::sidebar(
         shiny::h4("Gene selection"),
         shiny::selectizeInput(
@@ -68,6 +73,8 @@ mod_compare_expression_server <- function(id, cached) {
     ns <- session$ns
     cfg <- get_golem_config("expression_viewer")
     combined_expr <- from_bfc(cached)
+    pca_key <- paste0(cached, "_pca")
+    pca <- from_bfc(pca_key)
     gene_ids <- purrr::discard(combined_expr$expr$gene_id, is.na) |>
       `names<-`(NULL)
 
@@ -137,6 +144,31 @@ mod_compare_expression_server <- function(id, cached) {
         input$group_by,
         cur_palettes()
       )
+
+    # TODO: add in the palette thing and
+    # selection for changing the fill
+    output$pca <- shiny::renderPlot(
+      {
+        input$reset_palette
+        update_palette_input(
+          session,
+          input,
+          "palette_choices",
+          key_group = pca_key
+        )
+        plot_pca(
+          pca,
+          combined_expr,
+          color_by = "tumor_type", # TODO: change this
+          tumor_types = input$tumor_type,
+          cohorts = input$cohort,
+          key_group = pca_key
+        )
+      },
+      res = 120
+    ) |>
+      shiny::bindCache(input$tumor_type, input$cohort) |>
+      shiny::bindEvent(input$tumor_type, input$cohort)
   })
 }
 
