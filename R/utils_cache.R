@@ -44,7 +44,21 @@ get_cache_spec <- function(cfg = NULL, cache, bfc) {
         cache$remove("raw_bulk_expr")
         norm
       },
-      usage = "Bulk expression comparison"
+      usage = "Bulk expression comparison",
+      cache_key = "bulk_expr"
+    ),
+    list(
+      name = "bulk_expression_pca",
+      fn = \() {
+        data <- cache$get("bulk_expr")$expr
+        as_mat <- tibble::column_to_rownames(data, var = "gene_id") |>
+          as.matrix() |>
+          t()
+        pca <- prcomp(as_mat)
+        cache$remove("bulk_expr")
+        pca
+      },
+      usage = "Bulk PCA plot"
     ),
     list(
       name = "sc_pseudobulk_expression_raw",
