@@ -1,3 +1,20 @@
+cache_pca <- function(key, cache, cache_key, remove = TRUE) {
+  list(
+    name = paste0(key, "_pca"),
+    fn = \() {
+      data <- cache$get(cache_key)$expr
+      as_mat <- tibble::column_to_rownames(data, var = "gene_id") |>
+        as.matrix() |>
+        t()
+      pca <- prcomp(as_mat)
+      if (remove) {
+        cache$remove(cache_key)
+      }
+      pca
+    }
+  )
+}
+
 #' List of objects to cache and how
 #'
 #' @description
@@ -47,19 +64,7 @@ get_cache_spec <- function(cfg = NULL, cache, bfc) {
       usage = "Bulk expression comparison",
       cache_key = "bulk_expr"
     ),
-    list(
-      name = "bulk_expression_pca",
-      fn = \() {
-        data <- cache$get("bulk_expr")$expr
-        as_mat <- tibble::column_to_rownames(data, var = "gene_id") |>
-          as.matrix() |>
-          t()
-        pca <- prcomp(as_mat)
-        cache$remove("bulk_expr")
-        pca
-      },
-      usage = "Bulk PCA plot"
-    ),
+    cache_pca("bulk_expression", cache = cache, cache_key = "bulk_expr"),
     list(
       name = "sc_pseudobulk_expression_raw",
       fn = \() read_all_expr(cfg$expression_viewer, allowed_exts = "h5ad"),
@@ -73,7 +78,13 @@ get_cache_spec <- function(cfg = NULL, cache, bfc) {
         cache$remove("single_cell_expr")
         norm
       },
-      usage = "Single-cell pseudobulk expression comparison"
+      usage = "Single-cell pseudobulk expression comparison",
+      cache_key = "sc_psbulk_expr"
+    ),
+    cache_pca(
+      "sc_pseudobulk_expression",
+      cache = cache,
+      cache_key = "sc_psbulk_expr"
     )
   )
 }
