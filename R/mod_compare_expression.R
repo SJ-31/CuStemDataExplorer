@@ -24,13 +24,17 @@ mod_compare_expression_ui <- function(id, label) {
         id = ns("nav")
       ),
       sidebar = bslib::sidebar(
-        shiny::h4("Gene selection"),
-        shiny::selectizeInput(
-          ns("gene_selection"),
-          label = NULL,
-          choices = NULL,
-          multiple = TRUE,
-          options = list(maxItems = 15)
+        shiny::conditionalPanel(
+          condition = "input.nav != 'pca'",
+          shiny::h4("Gene selection"),
+          shiny::selectizeInput(
+            ns("gene_selection"),
+            label = NULL,
+            choices = NULL,
+            multiple = TRUE,
+            options = list(maxItems = 15)
+          ),
+          ns = ns
         ),
         shiny::h4("Filters"),
         shiny::selectizeInput(
