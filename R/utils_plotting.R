@@ -16,7 +16,7 @@ plot_pca <- function(
   box::use(ggplot2[ggplot, aes])
   joined <- tibble::as_tibble(pr_obj$x, rownames = "sample") |>
     dplyr::inner_join(
-      dplyr::select(expr_tbs$meta, dplyr::all_of(c("sample", color_by))),
+      expr_tbs$meta,
       by = dplyr::join_by(sample)
     )
   if (!is.null(tumor_types)) {
