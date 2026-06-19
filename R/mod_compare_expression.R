@@ -130,10 +130,20 @@ mod_compare_expression_server <- function(id, cached) {
       server = TRUE
     )
 
-    shiny::observe(randomize_palette(
-      input$palette_choices,
-      key_group = cached
-    )) |>
+    # Randomize whenever `input$reset_palette` gets pressed
+    shiny::observe({
+      if (input$nav != "pca") {
+        randomize_palette(
+          input$palette_choices,
+          key_group = cached
+        )
+      } else {
+        randomize_palette(
+          input$palette_choices,
+          key_group = pca_key
+        )
+      }
+    }) |>
       shiny::bindEvent(input$reset_palette)
 
     cur_palettes <- shiny::reactiveVal(rlang::hash(CACHE$get(cached)))
@@ -181,8 +191,6 @@ mod_compare_expression_server <- function(id, cached) {
         cur_palettes()
       )
 
-    # TODO: add in the palette thing and
-    # selection for changing the fill
     output$pca <- shiny::renderPlot(
       {
         input$reset_palette
@@ -203,8 +211,18 @@ mod_compare_expression_server <- function(id, cached) {
       },
       res = 120
     ) |>
-      shiny::bindCache(input$tumor_type, input$cohort, input$color_by) |>
-      shiny::bindEvent(input$tumor_type, input$cohort, input$color_by)
+      shiny::bindCache(
+        input$tumor_type,
+        input$cohort,
+        input$color_by,
+        cur_palettes_pca()
+      ) |>
+      shiny::bindEvent(
+        input$tumor_type,
+        input$cohort,
+        input$color_by,
+        cur_palettes_pca()
+      )
   })
 }
 
