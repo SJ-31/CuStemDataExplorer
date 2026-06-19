@@ -274,7 +274,7 @@ do_expr_plot_grouped <- function(long, group_by, genes, key_group) {
 
   plot |>
     add_palette_from_cache(
-      key = group_by,
+      key = fill,
       key_group = key_group,
       min_length = n_fill,
       fill = TRUE,
@@ -314,7 +314,7 @@ do_expr_plot <- function(
       long,
       group_by,
       genes,
-      key_group = paste0(key_group, "_grouped")
+      key_group = key_group
     ))
   }
   meta <- expr_tbs$meta

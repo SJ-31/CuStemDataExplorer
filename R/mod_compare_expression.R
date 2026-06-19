@@ -8,7 +8,7 @@
 #'
 #' @importFrom shiny NS tagList
 mod_compare_expression_ui <- function(id, label) {
-  box::use(bslib[nav_panel])
+  box::use(bslib[nav_panel], shiny[observeEvent])
 
   ns <- NS(id)
   bslib::nav_panel(
@@ -62,6 +62,7 @@ mod_compare_expression_ui <- function(id, label) {
               "Tumor type" = "tumor_type",
               "Cohort" = "cohort"
             ),
+            selected = "---"
           ),
           ns = ns,
         ),
@@ -148,6 +149,7 @@ mod_compare_expression_server <- function(id, cached) {
 
     cur_palettes <- shiny::reactiveVal(rlang::hash(CACHE$get(cached)))
     cur_palettes_pca <- shiny::reactiveVal(rlang::hash(CACHE$get(pca_key)))
+
     shiny::observeEvent(input$reset_palette, {
       new <- rlang::hash(CACHE$get(cached))
       new_pca <- rlang::hash(CACHE$get(pca_key))
