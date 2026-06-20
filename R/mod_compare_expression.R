@@ -77,11 +77,15 @@ mod_compare_expression_ui <- function(id, label) {
           ns = ns,
         ),
         shiny::h4("Reset palettes"),
-        shiny::selectizeInput(
-          ns("palette_choices"),
-          label = NULL,
-          choices = NULL,
-          multiple = TRUE
+        shiny::conditionalPanel(
+          condition = "input.nav != 'pca'",
+          shiny::selectizeInput(
+            ns("palette_choices"),
+            label = NULL,
+            choices = NULL,
+            multiple = TRUE
+          ),
+          ns = ns
         ),
         shiny::actionButton(ns("reset_palette"), "Reset")
       )
@@ -111,15 +115,6 @@ mod_compare_expression_server <- function(id, cached) {
 
     shiny::updateSelectizeInput(
       session,
-      "color_by",
-      choices = purrr::discard(
-        colnames(combined_expr$meta),
-        \(x) x %in% c("sample")
-      )
-    )
-
-    shiny::updateSelectizeInput(
-      session,
       "tumor_type",
       choices = unique(combined_expr$meta$tumor_type),
       server = TRUE
@@ -140,7 +135,7 @@ mod_compare_expression_server <- function(id, cached) {
         )
       } else {
         randomize_palette(
-          input$palette_choices,
+          input$color_by,
           key_group = pca_key
         )
       }
@@ -148,15 +143,13 @@ mod_compare_expression_server <- function(id, cached) {
       shiny::bindEvent(input$reset_palette)
 
     cur_palettes <- shiny::reactiveVal(rlang::hash(CACHE$get(cached)))
-    cur_palettes_pca <- shiny::reactiveVal(rlang::hash(CACHE$get(pca_key)))
 
     shiny::observeEvent(input$reset_palette, {
       new <- rlang::hash(CACHE$get(cached))
-      new_pca <- rlang::hash(CACHE$get(pca_key))
-      cur_palettes_pca(new_pca)
       cur_palettes(new)
     })
 
+    ## ** Heatmap and boxplots
     output$expr_comparison <- shiny::renderPlot(
       {
         input$reset_palette
@@ -193,16 +186,21 @@ mod_compare_expression_server <- function(id, cached) {
         cur_palettes()
       )
 
+    ## ** PCA
+
+    shiny::updateSelectizeInput(
+      session,
+      "color_by",
+      choices = purrr::discard(
+        colnames(combined_expr$meta),
+        \(x) x %in% c("sample")
+      )
+    )
+
     output$pca <- shiny::renderPlot(
       {
         input$reset_palette
-        update_palette_input(
-          session,
-          input,
-          "palette_choices",
-          key_group = pca_key
-        )
-        plot_pca(
+        plot <- plot_pca(
           pca,
           combined_expr,
           color_by = input$color_by,
@@ -210,6 +208,7 @@ mod_compare_expression_server <- function(id, cached) {
           cohorts = input$cohort,
           key_group = pca_key
         )
+        plot
       },
       res = 120
     ) |>
@@ -217,14 +216,24 @@ mod_compare_expression_server <- function(id, cached) {
         input$tumor_type,
         input$cohort,
         input$color_by,
-        cur_palettes_pca()
+        input$reset_palette
       ) |>
       shiny::bindEvent(
         input$tumor_type,
         input$cohort,
         input$color_by,
-        cur_palettes_pca()
+        input$reset_palette
       )
+
+    ## ** Update selection
+    observeEvent(input$nav, {
+      update_palette_input(
+        session,
+        input,
+        input_id = "palette_choices",
+        key_group = cached
+      )
+    })
   })
 }
 
