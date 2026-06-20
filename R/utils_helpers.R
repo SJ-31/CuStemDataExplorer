@@ -100,14 +100,15 @@ palette_from_cache <- function(
   key_group,
   min_length = NULL,
   discrete = TRUE,
-  reset = FALSE
+  reset = FALSE,
+  use_suffix = FALSE
 ) {
   if (discrete) {
     fn <- \() random_palette_d(min_length = min_length)
   } else {
     fn <- random_palette_c
   }
-  if (!is.null(min_length)) {
+  if (!is.null(min_length) && use_suffix) {
     key <- glue::glue("{key}_{min_length}")
   }
 
@@ -130,6 +131,10 @@ palette_from_cache <- function(
 }
 
 
+#' Update which palettes are selectable for selectizeInput widget
+#' labelled with `input_id`
+#'
+#' @return TRUE if the widget was updated
 update_palette_input <- function(session, input, input_id, key_group) {
   keys <- names(CACHE$get(key_group))
   previous <- input[[input_id]]
@@ -142,6 +147,7 @@ update_palette_input <- function(session, input, input_id, key_group) {
       server = TRUE
     )
   }
+  !(length(keys) == 0)
 }
 
 randomize_palette <- function(

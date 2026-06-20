@@ -13,12 +13,16 @@ plot_pca <- function(
   tumor_types = NULL,
   cohorts = NULL
 ) {
+  if (nchar(color_by) == 0) {
+    return()
+  }
   box::use(ggplot2[ggplot, aes])
   joined <- tibble::as_tibble(pr_obj$x, rownames = "sample") |>
     dplyr::inner_join(
       expr_tbs$meta,
       by = dplyr::join_by(sample)
     )
+  n_labels <- length(unique(joined[[color_by]]))
   if (!is.null(tumor_types)) {
     joined <- joined |> dplyr::filter(tumor_type %in% tumor_types)
   }
@@ -38,7 +42,7 @@ plot_pca <- function(
     add_palette_from_cache(
       key = color_by,
       key_group = key_group,
-      min_length = length(unique(joined[color_by])),
+      min_length = n_labels,
       fill = FALSE
     )
 }
