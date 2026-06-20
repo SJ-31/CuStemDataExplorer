@@ -11,7 +11,7 @@ mod_de_ui <- function(id, label) {
   ns <- NS(id)
   bslib::nav_panel(
     label,
-    bslib::layout_column_wrap(
+    bslib::layout_columns(
       bslib::card(
         bslib::layout_columns(
           shiny::h3("Contrast"),
@@ -33,12 +33,13 @@ mod_de_ui <- function(id, label) {
           value = "volcano"
         ),
         bslib::nav_panel(
-          "Scatter plot (for selected gene)",
-          shiny::plotOutput(ns("box_plot")),
-          value = "box_plot"
+          "Scatter plot for selected genes (maximum 20)",
+          shiny::plotOutput(ns("scatter")),
+          value = "scatter"
         ),
         id = ns("nav")
-      )
+      ),
+      col_widths = c(5, 7)
     )
   )
 }
@@ -82,7 +83,7 @@ mod_de_server <- function(id, cached, expression_key) {
         con <- dbs$pairwise
       }
       query <- glue("SELECT * FROM '{contrast}' ORDER BY log2FoldChange")
-      df <- dbGetQuery(con, query)
+      df <- dbGetQuery(con, query) |> dplyr::filter(!is.na(log2FoldChange))
       if (format) {
         df <- df |>
           dplyr::rename(lfc = "log2FoldChange") |>
@@ -166,7 +167,7 @@ mod_de_server <- function(id, cached, expression_key) {
       )
       get_contrast(input$contrast, indices = index)$gene
     })
-    output$box_plot <- shiny::renderPlot({
+    output$scatter <- shiny::renderPlot({
       input$reset_palette
       de_scatter_plot(
         expr_tbs = expr,

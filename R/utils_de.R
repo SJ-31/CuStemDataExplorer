@@ -102,13 +102,17 @@ de_scatter_plot <- function(
   other_factors <- filter_by[filter_by != first]
   long[[factor]] <- factor(long[[factor]], levels = c(first, other_factors))
 
-  # TODO: center the jitter points on each box and decrease their widths
   plot <- ggplot2::ggplot(
     long,
     ggplot2::aes(x = gene_id, y = value, color = !!as.symbol(factor))
   ) +
     ggplot2::geom_boxplot() +
-    ggplot2::geom_jitter() +
+    ggplot2::geom_jitter(
+      position = ggplot2::position_jitterdodge(
+        jitter.width = 0.2,
+        dodge.width = 0.75
+      )
+    ) +
     ggplot2::ylab("Normalized Expression") +
     ggplot2::xlab("Gene")
 
