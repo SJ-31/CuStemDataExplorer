@@ -304,11 +304,21 @@ do_expr_plot <- function(
     dplyr[filter]
   )
   checkmate::assert_list(cfg)
-
+  labels_to_add <- c(
+    "Cohort" = "cohort",
+    "Tumor type" = "tumor_type",
+    "Treatment" = "treatment",
+    "Patient" = "patient"
+  )
   long <- expr_tbs$expr |>
     filter(gene_id %in% genes) |>
     tidyr::pivot_longer(-gene_id, names_to = "sample") |>
     dplyr::left_join(expr_tbs$meta, by = dplyr::join_by(sample))
+
+  # Get greatest number of factors before filtering
+  n_labels_per <- lapply(labels_to_add, \(x) length(unique(long[[x]]))) |>
+    `names<-`(labels_to_add)
+
   if (group_by != "none") {
     return(do_expr_plot_grouped(
       long,
@@ -357,16 +367,10 @@ do_expr_plot <- function(
 
   plot_list <- list(expr_plot)
 
-  labels_to_add <- c(
-    "Cohort" = "cohort",
-    "Tumor type" = "tumor_type",
-    "Treatment" = "treatment",
-    "Patient" = "patient"
-  )
   for (i in seq_along(labels_to_add)) {
     label_col <- labels_to_add[i]
     legend_display <- names(labels_to_add[i])
-    n_labels <- length(unique(long[[label_col]]))
+    n_labels <- n_labels_per[[label_col]]
     if (n_labels > 1) {
       palette <- palette_from_cache(
         key = label_col,
