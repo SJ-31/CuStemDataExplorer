@@ -99,7 +99,9 @@ de_scatter_plot <- function(
     dplyr::left_join(expr_tbs$meta, by = dplyr::join_by(sample)) |>
     dplyr::filter(!!as.symbol(factor) %in% filter_by)
 
-  # TODO: wanna have the reference level be the first one
+  other_factors <- filter_by[filter_by != first]
+  long[[factor]] <- factor(long[[factor]], levels = c(first, other_factors))
+
   # TODO: center the jitter points on each box and decrease their widths
   plot <- ggplot2::ggplot(
     long,
