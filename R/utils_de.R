@@ -54,7 +54,7 @@ do_de <- function(obj, how = "deseq2", kws) {
 }
 
 
-volcano_plot <- function(obj, p_threshold = 0.05) {
+volcano_plot <- function(obj, key_group, p_threshold = 0.05, key = "volcano") {
   if (!is.data.frame(obj)) {
     tb <- obj |>
       as.data.frame() |>
@@ -65,18 +65,21 @@ volcano_plot <- function(obj, p_threshold = 0.05) {
   if ("is_sig" %notin% colnames(tb)) {
     tb$is_sig <- tb$padj < p_threshold
   }
-  ggplot2::ggplot(
+  plot <- ggplot2::ggplot(
     tb,
     ggplot2::aes(x = log2FoldChange, y = -log(padj), color = is_sig)
   ) +
     ggplot2::geom_point() +
     ggplot2::guides(color = ggplot2::guide_legend(title = "Significant"))
+  add_palette_from_cache(plot, key = key, key_group = key_group, min_length = 2)
 }
 
 de_scatter_plot <- function(
   expr_tbs,
   chosen_genes,
   contrast,
+  key_group,
+  key = "de_scatter",
   factor = "tumor_type"
 ) {
   splits <- stringr::str_split_1(contrast, "vs.") |>
@@ -98,7 +101,7 @@ de_scatter_plot <- function(
 
   # TODO: wanna have the reference level be the first one
   # TODO: center the jitter points on each box and decrease their widths
-  ggplot2::ggplot(
+  plot <- ggplot2::ggplot(
     long,
     ggplot2::aes(x = gene_id, y = value, color = !!as.symbol(factor))
   ) +
@@ -106,4 +109,11 @@ de_scatter_plot <- function(
     ggplot2::geom_jitter() +
     ggplot2::ylab("Normalized Expression") +
     ggplot2::xlab("Gene")
+
+  add_palette_from_cache(
+    plot,
+    key = key,
+    key_group = key_group,
+    min_length = length(unique(expr_tbs$meta[[factor]]))
+  )
 }

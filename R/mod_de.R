@@ -13,7 +13,11 @@ mod_de_ui <- function(id, label) {
     label,
     bslib::layout_column_wrap(
       bslib::card(
-        shiny::h3("Contrast"),
+        bslib::layout_columns(
+          shiny::h3("Contrast"),
+          shiny::actionButton(ns("reset_palette"), "Reset palette"),
+          col_widths = c(10, 2)
+        ),
         shiny::selectizeInput(
           ns("contrast"),
           choices = NULL,
@@ -23,11 +27,17 @@ mod_de_ui <- function(id, label) {
         reactable::reactableOutput(ns("de_results"))
       ),
       bslib::navset_card_tab(
-        bslib::nav_panel("Volcano plot", shiny::plotOutput(ns("volcano"))),
+        bslib::nav_panel(
+          "Volcano plot",
+          shiny::plotOutput(ns("volcano")),
+          value = "volcano"
+        ),
         bslib::nav_panel(
           "Scatter plot (for selected gene)",
-          shiny::plotOutput(ns("box_plot"))
-        )
+          shiny::plotOutput(ns("box_plot")),
+          value = "box_plot"
+        ),
+        id = ns("nav")
       )
     )
   )
@@ -102,15 +112,40 @@ mod_de_server <- function(id, cached, expression_key) {
       selected = all_contrasts[1],
       server = TRUE
     )
+    ## * Update palettes
 
-    output$volcano <- shiny::renderPlot(
-      volcano_plot(get_contrast(
-        input$contrast,
-        format = FALSE
-      ))
-    ) |>
-      shiny::bindCache(input$contrast) |>
-      shiny::bindEvent(input$contrast)
+    palette_key_group <- "bulk_de"
+    n_ttypes <- length(unique(expr$meta$tumor_type))
+
+    shiny::observeEvent(input$reset_palette, {
+      if (input$nav == "volcano") {
+        randomize_palette(
+          "volcano",
+          key_group = palette_key_group,
+          min_length = 2
+        )
+      } else {
+        randomize_palette(
+          "de_scatter",
+          key_group = palette_key_group,
+          min_length = n_ttypes
+        )
+      }
+    })
+
+    ## * Plots & tables
+    output$volcano <- shiny::renderPlot({
+      input$reset_palette
+      volcano_plot(
+        get_contrast(
+          input$contrast,
+          format = FALSE,
+        ),
+        key_group = "bulk_de"
+      )
+    }) |>
+      shiny::bindCache(input$contrast, input$reset_palette) |>
+      shiny::bindEvent(input$contrast, input$reset_palette)
 
     output$de_results <- reactable::renderReactable(reactable(
       get_contrast(
@@ -131,14 +166,18 @@ mod_de_server <- function(id, cached, expression_key) {
       )
       get_contrast(input$contrast, indices = index)$gene
     })
-    output$box_plot <- shiny::renderPlot(de_scatter_plot(
-      expr_tbs = expr,
-      chosen_genes = chosen_genes(),
-      contrast = input$contrast,
-      factor = "tumor_type"
-    )) |>
-      shiny::bindCache(input$contrast, chosen_genes()) |>
-      shiny::bindEvent(input$contrast, chosen_genes())
+    output$box_plot <- shiny::renderPlot({
+      input$reset_palette
+      de_scatter_plot(
+        expr_tbs = expr,
+        chosen_genes = chosen_genes(),
+        key_group = palette_key_group,
+        contrast = input$contrast,
+        factor = "tumor_type"
+      )
+    }) |>
+      shiny::bindCache(input$contrast, chosen_genes(), input$reset_palette) |>
+      shiny::bindEvent(input$contrast, chosen_genes(), input$reset_palette)
   })
 }
 
