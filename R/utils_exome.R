@@ -139,8 +139,6 @@ format_sample_vcf <- function(
     "Canonical",
     "HGVSg",
     "ClinSig",
-    "Somatic_VEP",
-    "Pheno",
     "PubMed"
   )
 ) {
@@ -238,9 +236,7 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
     "HGVSp",
     "Canonical",
     "HGVSg",
-    "ClinSig",
-    "Somatic_VEP",
-    "Pheno"
+    "ClinSig"
   )
 
   avg <- c("AF", "AD_REF", "AD_MAX", "AN", "GERMQ", "QSS", "SomaticEVS")
@@ -306,7 +302,7 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
       dplyr::starts_with("HGVS"),
       .before = dplyr::everything()
     ) |>
-    dplyr::mutate(
+    mutate(
       HGVSc = stringr::str_extract(HGVSc, ".*c\\.(.*)", group = 1),
       HGVSp = stringr::str_extract(HGVSp, ".*p\\.(.*)", group = 1)
     ) |>
@@ -314,6 +310,41 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
       `Existing variation` = "Existing_variation",
       `Feature type` = "Feature_type"
     )
+
+  stats <- select(comb, any_of(c("HGVSg", avg, "SOMATIC", "GT"))) |>
+    mutate(
+      across(any_of(avg), as.character),
+      SOMATIC = as.character(SOMATIC),
+      GT = purrr::map_chr(GT, \(gt) {
+        purrr::discard(unique(gt), is.na) |> paste0(collapse = ", ")
+      })
+    ) |>
+    tidyr::pivot_longer(-HGVSg) |>
+    mutate(name = paste0("<strong>", name, ":</strong>")) |>
+    tidyr::unite(
+      col = "Caller statistics",
+      name,
+      value,
+      sep = "  ",
+      remove = TRUE
+    ) |>
+    group_by(HGVSg) |>
+    dplyr::summarise(`Caller statistics` = list(`Caller statistics`))
+
+  comb <- select(comb, -any_of(c(avg, "SOMATIC", "GT"))) |>
+    dplyr::inner_join(stats, by = dplyr::join_by(HGVSg)) |>
+    mutate(
+      `Exon/Intron` = purrr::map2_chr(Exon, Intron, \(ex, int) {
+        if ((is.na(int) && is.na(ex)) || (nchar(int) == 0 && nchar(ex) == 0)) {
+          ""
+        } else if (!is.na(ex) && nchar(ex) > 0) {
+          glue::glue("{ex} (exon)")
+        } else {
+          glue::glue("{int} (intron)")
+        }
+      })
+    ) |>
+    select(-Exon, -Intron)
 
   grouped <- comb |>
     group_by(across(all_of(gene_cols))) |>
@@ -334,6 +365,7 @@ make_variant_table <- function(gene_tb) {
   box::use(reactable[reactable, colGroup, colDef])
   reactable(
     dplyr::select(gene_tb, -data),
+    searchable = TRUE,
     columns = list(
       `Consequence counts` = colDef(
         cell = \(v, i, n) sum(v),
@@ -350,6 +382,7 @@ make_variant_table <- function(gene_tb) {
       reactable(
         dplyr::select(cur, -Sample),
         outlined = TRUE,
+        searchable = TRUE,
         columns = list(
           `Sample count` = colDef(html = TRUE, details = \(i) {
             html_join_newlines(cur$Sample[[i]]) |>
@@ -365,6 +398,11 @@ make_variant_table <- function(gene_tb) {
             cell = \(v, i, n) length(v),
             details = \(i) reactable_display_list(i, cur, "PubMed")
           ),
+          `Caller statistics` = colDef(
+            html = TRUE,
+            cell = \(v, i, n) "",
+            details = \(i) reactable_display_list(i, cur, "Caller statistics")
+          ),
           Consequence = colDef(
             html = TRUE,
             cell = \(v, i, n) length(v),
@@ -373,33 +411,16 @@ make_variant_table <- function(gene_tb) {
         ),
         columnGroups = list(
           colGroup(
-            name = "IDs",
+            name = "Change",
             columns = c("HGVSg", "HGVSc", "HGVSp")
           ),
-          colGroup(name = "Location", columns = c("Exon", "Intron")),
           colGroup(
             name = "Classification",
             columns = c("Consequence", "Impact", "ClinSig"),
           ),
           colGroup(
-            name = "Cohort statistics",
-            columns = c(
-              "Sample count",
-              "Sample",
-              "AF",
-              "AD_REF",
-              "AD_MAX",
-              "AN",
-              "QSS",
-              "GERMQ",
-              "SOMATIC",
-              "SomaticEVS",
-              "GT"
-            )
-          ),
-          colGroup(
             name = "External links",
-            columns = c("Existing_variation", "PubMed")
+            columns = c("Existing variation", "PubMed")
           )
         )
       )
