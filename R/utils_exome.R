@@ -331,14 +331,46 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
 #' @param gene_tb tibble returned from `combine_vcf_tbs$grouped`
 #'
 make_variant_table <- function(gene_tb) {
-  box::use(reactable[reactable, colGroup])
+  box::use(reactable[reactable, colGroup, colDef])
   reactable(
     dplyr::select(gene_tb, -data),
+    columns = list(
+      `Consequence counts` = colDef(
+        cell = \(v, i, n) sum(v),
+        html = TRUE,
+        details = \(i) {
+          val <- gene_tb$`Consequence counts`[[i]]
+          paste0(names(val), ": ", val, collapse = "<br>") |>
+            html_center_div()
+        }
+      )
+    ),
     details = function(index) {
       cur <- gene_tb$data[[index]]
       reactable(
-        cur,
+        dplyr::select(cur, -Sample),
         outlined = TRUE,
+        columns = list(
+          `Sample count` = colDef(html = TRUE, details = \(i) {
+            html_join_newlines(cur$Sample[[i]]) |>
+              html_with_header("Sample names")
+          }),
+          `Existing variation` = colDef(
+            html = TRUE,
+            cell = \(v, i, n) length(v),
+            details = \(i) reactable_display_list(i, cur, "Existing variation")
+          ),
+          PubMed = colDef(
+            html = TRUE,
+            cell = \(v, i, n) length(v),
+            details = \(i) reactable_display_list(i, cur, "PubMed")
+          ),
+          Consequence = colDef(
+            html = TRUE,
+            cell = \(v, i, n) length(v),
+            details = \(i) reactable_display_list(i, cur, "Consequence")
+          )
+        ),
         columnGroups = list(
           colGroup(
             name = "IDs",
