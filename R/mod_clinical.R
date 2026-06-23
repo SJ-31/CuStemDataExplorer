@@ -34,7 +34,7 @@ mod_clinical_server <- function(id, sheet_data) {
           html = TRUE,
           details = reactable::JS(
             "function(rowInfo) {
-        return `</br>${rowInfo.values['Note']}</br>`
+        return `<br>${rowInfo.values['Note']}<br>`
 }"
           ),
         ),

@@ -64,7 +64,7 @@ mod_samples_server <- function(id, sheet_data) {
             if (!is.na(val)) {
               paste0(
                 "<pre>",
-                stringr::str_replace_all(val, ";", "</br>"),
+                stringr::str_replace_all(val, ";", "<br>"),
                 "</pre>"
               )
             }
@@ -82,7 +82,7 @@ mod_samples_server <- function(id, sheet_data) {
           details = \(index) {
             val <- data$`Warnings`[index]
             if (!is.na(val)) {
-              stringr::str_replace_all(val, ";", "</br>")
+              stringr::str_replace_all(val, ";", "<br>")
             }
           }
         )
