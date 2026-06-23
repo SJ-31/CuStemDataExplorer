@@ -461,3 +461,85 @@ make_variant_table <- function(gene_tb) {
     )
   )
 }
+
+#' Read a variant specification file
+#'
+#' @return
+#' A list with names corresponding to tumor types. Each
+#' value is a named list with four tibbles: genes, vars, sbs_counts, var_counts
+#' The former two are aggregated and single variant statistics, respectively
+read_variant_spec <- function(file, cfg) {
+  box::use(dplyr[mutate])
+  contents <- yaml::read_yaml(f)
+
+  read <- function(spec) {
+    lapply(spec, \(lst) {
+      cohort <- lst$cohort %||% "-"
+      prefix <- lst$prefix %||% ""
+      suffix <- lst$suffix %||% ""
+      snames <- names(lst$samples)
+
+      vc_filters <- cfg$filters$variant_calling
+
+      res <- lapply(snames, \(n) {
+        vcf_key <- glue::glue("{prefix}{n}{suffix}")
+        tmp <- format_sample_vcf(
+          lst$samples[[n]],
+          sample_name = vcf_key,
+          filters = vc_filters
+        )
+        tmp$sbs_counts$sample <- n
+        tmp$sbs_counts$cohort <- cohort
+        tmp$variant_counts$cohort <- cohort
+        tmp$variant_counts$sample <- n
+        tmp
+      }) |>
+        `names<-`(snames)
+
+      combined <- combine_vcf_tbs(lapply(res, \(x) x$tb), filters = cfg$filters)
+      combined$genes <- mutate(combined$genes, cohort = cohort)
+      combined$vars <- mutate(combined$vars, cohort = cohort)
+      sbs <- dplyr::bind_rows(lapply(res, \(x) x$sbs_counts))
+      var_counts <- dplyr::bind_rows(lapply(res, \(x) x$variant_counts))
+
+      list(
+        genes = combined$genes,
+        vars = combined$vars,
+        sbs_counts = sbs,
+        var_counts = var_counts
+      )
+    })
+  }
+
+  lapply(names(contents), read) |> `names<-`(contents)
+}
+
+#' Read sample specification files for variant data
+#'
+#' @description
+#' See the README for the description of the spec files
+read_variant_spec_all <- function(cfg, allowed_exts = c("vcf", "vcf.gz")) {
+  dir <- cfg$spec_directory
+  checkmate::assert_directory_exists(dir)
+  per_file <- lapply(
+    list.files(dir, pattern = ".yml|yaml$", full.names = TRUE),
+    \(f) read_variant_spec(f)
+  )
+  per_ttypes <- list(
+    vars = list(),
+    genes = list(),
+    sbs_counts = list(),
+    var_counts = list()
+  )
+  for (lst in per_file) {
+    for (tb_name in names(per_ttypes)) {
+      for (ttype in names(lst)) {
+        prev <- per_ttypes[[tb_name]][[ttype]]
+        cur <- lst[[ttype]][[tb_name]]
+        per_ttypes[[tb_name]][[ttype]] <- dplyr::bind_rows(previous, cur)
+      }
+    }
+  }
+
+  per_ttypes
+}
