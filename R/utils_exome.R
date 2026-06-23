@@ -316,7 +316,12 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
       across(any_of(avg), as.character),
       SOMATIC = as.character(SOMATIC),
       GT = purrr::map_chr(GT, \(gt) {
-        purrr::discard(unique(gt), is.na) |> paste0(collapse = ", ")
+        val <- purrr::discard(unique(gt), is.na) |> paste0(collapse = ", ")
+        if (nchar(val) == 0) {
+          NaN
+        } else {
+          val
+        }
       })
     ) |>
     tidyr::pivot_longer(-HGVSg) |>
@@ -350,8 +355,9 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
     group_by(across(all_of(gene_cols))) |>
     nest() |>
     mutate(
-      `N variants` = nrow(data),
-      `Consequence counts` = lapply(data, \(x) table(unlist(x$Consequence)))
+      N = purrr::map_dbl(data, nrow),
+      `Consequence counts` = lapply(data, \(x) table(unlist(x$Consequence))),
+      Canonical = dplyr::recode_values(Canonical, "YES" ~ "Y", default = "N")
     )
 
   list(genes = grouped, vars = comb)
@@ -373,7 +379,7 @@ make_variant_table <- function(gene_tb) {
         details = \(i) {
           val <- gene_tb$`Consequence counts`[[i]]
           paste0(names(val), ": ", val, collapse = "<br>") |>
-            html_center_div()
+            html_pad_div()
         }
       )
     ),
@@ -386,7 +392,8 @@ make_variant_table <- function(gene_tb) {
         columns = list(
           `Sample count` = colDef(html = TRUE, details = \(i) {
             html_join_newlines(cur$Sample[[i]]) |>
-              html_with_header("Sample names")
+              html_with_header("Sample names") |>
+              html_pad_div()
           }),
           `Existing variation` = colDef(
             html = TRUE,
