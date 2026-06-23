@@ -378,7 +378,13 @@ make_variant_table <- function(gene_tb) {
         html = TRUE,
         details = \(i) {
           val <- gene_tb$`Consequence counts`[[i]]
-          paste0(names(val), ": ", val, collapse = "<br>") |>
+          paste0(
+            "<strong>",
+            names(val),
+            ": </strong>",
+            val,
+            collapse = "<br>"
+          ) |>
             html_pad_div()
         }
       )
@@ -387,7 +393,7 @@ make_variant_table <- function(gene_tb) {
       cur <- gene_tb$data[[index]]
       reactable(
         dplyr::select(cur, -Sample),
-        outlined = TRUE,
+        compact = TRUE,
         searchable = TRUE,
         columns = list(
           `Sample count` = colDef(html = TRUE, details = \(i) {
@@ -429,8 +435,20 @@ make_variant_table <- function(gene_tb) {
             name = "External links",
             columns = c("Existing variation", "PubMed")
           )
+        ),
+        bordered = TRUE,
+        theme = reactable::reactableTheme(
+          backgroundColor = "#c3e7eb",
+          headerStyle = list(backgroundColor = "#559f9f", color = "#feffff"),
+          borderColor = "#feffff",
+          groupHeaderStyle = list(backgroundColor = "#feffff"),
+          searchInputStyle = list(width = "100%")
         )
       )
-    }
+    },
+    borderless = TRUE,
+    theme = reactable::reactableTheme(
+      borderColor = "#7eccd3"
+    )
   )
 }
