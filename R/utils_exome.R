@@ -27,6 +27,7 @@ count_sbs <- function(vcf) {
     rename(substitution = "Var1", count = "Freq")
 }
 
+
 VALID_CONSEQUENCE <- c(
   "3_prime_UTR_variant",
   "5_prime_UTR_variant",
@@ -235,7 +236,6 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
     "Intron",
     "HGVSc",
     "HGVSp",
-    "Existing_variation",
     "Canonical",
     "HGVSg",
     "ClinSig",
@@ -251,7 +251,7 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
     "Symbol",
     "Gene",
     "Feature",
-    "Feature_type",
+    "Feature type",
     "Biotype",
     "Canonical"
   )
@@ -263,7 +263,17 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
     tb <- dplyr::mutate(
       tbs[[x]],
       Sample = x,
-      Consequence = lapply(Consequence, \(cons) str_split_1(cons, "&"))
+      Consequence = lapply(Consequence, \(cons) str_split_1(cons, "&")),
+      Existing_variation = lapply(
+        Existing_variation,
+        \(e) {
+          if (nchar(e) == 0) {
+            character(0)
+          } else {
+            str_split_1(e, "&")
+          }
+        }
+      )
     )
     if ("consequence" %in% names(filters)) {
       tb <- filter_list_col(
@@ -281,11 +291,6 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
         "ClinSig"
       )
     }
-
-    ## for (cons in cons_count) {
-    ##   tb[[paste0("is_", cons)]] <- purrr::pluck(tb$Consequence, \(x) x == cons)
-    ## }
-
     tb
   }) |>
     dplyr::bind_rows() |>
@@ -296,7 +301,8 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
       across(any_of(avg), \(x) mean(x, na.rm = TRUE)),
       across(any_of(uniq), \(x) list(unique(x))),
       SOMATIC = any(SOMATIC),
-      Consequence = list(unique(unlist(Consequence)))
+      Consequence = list(unique(unlist(Consequence))),
+      Existing_variation = list(unique(unlist(Existing_variation)))
     ) |>
     dplyr::relocate(
       dplyr::starts_with("HGVS"),
@@ -305,6 +311,10 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
     dplyr::mutate(
       HGVSc = stringr::str_extract(HGVSc, ".*c\\.(.*)", group = 1),
       HGVSp = stringr::str_extract(HGVSp, ".*p\\.(.*)", group = 1)
+    ) |>
+    dplyr::rename(
+      `Existing variation` = "Existing_variation",
+      `Feature type` = "Feature_type"
     )
 
   grouped <- comb |>
