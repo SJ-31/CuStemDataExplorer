@@ -240,12 +240,12 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
     "HGVSg",
     "ClinSig",
     "Somatic_VEP",
-    "Pheno",
-    "PubMed"
+    "Pheno"
   )
 
   avg <- c("AF", "AD_REF", "AD_MAX", "AN", "GERMQ", "QSS", "SomaticEVS")
   uniq <- c("GT", "Sample")
+  list_uniq <- c("Consequence", "Existing_variation", "PubMed")
 
   gene_cols <- c(
     "Symbol",
@@ -256,25 +256,24 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
     "Canonical"
   )
 
-  cons_count <- c("synonymous_variant", "missense_variant")
-
   checkmate::assert_list(tbs, names = "unique")
   comb <- lapply(names(tbs), \(x) {
-    tb <- dplyr::mutate(
-      tbs[[x]],
-      Sample = x,
-      Consequence = lapply(Consequence, \(cons) str_split_1(cons, "&")),
-      Existing_variation = lapply(
-        Existing_variation,
-        \(e) {
-          if (nchar(e) == 0) {
-            character(0)
-          } else {
-            str_split_1(e, "&")
-          }
+    tb <- mutate(tbs[[x]], Sample = x) |>
+      mutate(across(
+        any_of(c("Consequence", "Existing_variation", "PubMed")),
+        \(col) {
+          lapply(
+            col,
+            \(e) {
+              if (nchar(e) == 0) {
+                character(0)
+              } else {
+                str_split_1(e, "&")
+              }
+            }
+          )
         }
-      )
-    )
+      ))
     if ("consequence" %in% names(filters)) {
       tb <- filter_list_col(
         tb,
@@ -301,8 +300,7 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
       across(any_of(avg), \(x) mean(x, na.rm = TRUE)),
       across(any_of(uniq), \(x) list(unique(x))),
       SOMATIC = any(SOMATIC),
-      Consequence = list(unique(unlist(Consequence))),
-      Existing_variation = list(unique(unlist(Existing_variation)))
+      across(any_of(list_uniq), \(x) list(unique(unlist(x))))
     ) |>
     dplyr::relocate(
       dplyr::starts_with("HGVS"),
