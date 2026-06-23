@@ -161,17 +161,21 @@ format_sample_vcf <- function(
     )
 
   if (!is.null(filters)) {
-    if ("min_alt_depth" %in% names(filters)) {
+    if (
+      "min_alt_depth" %in% names(filters) && !is.null(filters$min_alt_depth)
+    ) {
       mask <- from_geno$AD_MAX >= filters$min_alt_depth
       vcf <- vcf[mask, ]
       from_geno <- from_geno[mask, ]
     }
-    if ("max_ref_depth" %in% names(filters)) {
+    if (
+      "max_ref_depth" %in% names(filters) && !is.null(filters$max_ref_depth)
+    ) {
       mask <- from_geno$AD_REF < filters$max_ref_depth
       vcf <- vcf[mask, ]
       from_geno <- from_geno[mask, ]
     }
-    if ("min_af" %in% names(filters)) {
+    if ("min_af" %in% names(filters) && !is.null(filters$min_af)) {
       mask <- from_geno$AF >= filters$min_af
       vcf <- vcf[mask, ]
       from_geno <- from_geno[mask, ]
@@ -197,7 +201,9 @@ format_sample_vcf <- function(
 
   variant_counts <- lapply(info(vcf)$Consequence, \(x) str_split_1(x, "&")) |>
     unlist() |>
-    table()
+    table() |>
+    as.data.frame() |>
+    dplyr::rename(Consequence = "Var1", Count = "Freq")
 
   tb <- dplyr::bind_cols(
     from_geno,
@@ -318,7 +324,7 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
       GT = purrr::map_chr(GT, \(gt) {
         val <- purrr::discard(unique(gt), is.na) |> paste0(collapse = ", ")
         if (nchar(val) == 0) {
-          NaN
+          "NaN"
         } else {
           val
         }
@@ -441,7 +447,10 @@ make_variant_table <- function(gene_tb) {
           backgroundColor = "#c3e7eb",
           headerStyle = list(backgroundColor = "#559f9f", color = "#feffff"),
           borderColor = "#feffff",
-          groupHeaderStyle = list(backgroundColor = "#feffff"),
+          groupHeaderStyle = list(
+            backgroundColor = "#feffff",
+            color = "#509d9d"
+          ),
           searchInputStyle = list(width = "100%")
         )
       )
