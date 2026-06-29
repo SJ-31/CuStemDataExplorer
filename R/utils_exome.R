@@ -541,7 +541,8 @@ read_variant_spec <- function(file, cfg) {
   contents <- yaml::read_yaml(file)
 
   read <- function(spec) {
-    lapply(spec, \(lst) {
+    to_combine <- list()
+    from_cohort <- lapply(spec, \(lst) {
       cohort <- lst$cohort %||% "-"
       prefix <- lst$prefix %||% ""
       suffix <- lst$suffix %||% ""
@@ -556,6 +557,14 @@ read_variant_spec <- function(file, cfg) {
           sample_name = vcf_key,
           filters = vc_filters
         )
+        if (!is.null(lst$cohort)) {
+          combine_key <- glue::glue("{cohort}::{vcf_key}")
+        } else {
+          combine_key <- vcf_key
+        }
+        to_combine[[combine_key]] <<- tmp$tb
+
+        tmp$tb <- NULL
         tmp$sbs_counts$sample <- n
         tmp$sbs_counts$cohort <- cohort
         tmp$variant_counts$cohort <- cohort
@@ -564,22 +573,23 @@ read_variant_spec <- function(file, cfg) {
       }) |>
         `names<-`(snames)
 
-      combined <- combine_vcf_tbs(lapply(res, \(x) x$tb), filters = cfg$filters)
-      combined$genes <- mutate(combined$genes, cohort = cohort)
-      combined$vars <- mutate(combined$vars, cohort = cohort)
       sbs <- dplyr::bind_rows(lapply(res, \(x) x$sbs_counts))
       var_counts <- dplyr::bind_rows(lapply(res, \(x) x$variant_counts))
-
-      list(
-        genes = combined$genes,
-        vars = combined$vars,
-        sbs_counts = sbs,
-        var_counts = var_counts
-      )
+      list(s = sbs, v = var_counts)
     })
+    combined <- combine_vcf_tbs(to_combine, filters = cfg$filters)
+    all_sbs <- lapply(from_cohort, \(x) x$s) |> dplyr::bind_rows()
+    all_var_counts <- lapply(from_cohort, \(x) x$v) |> dplyr::bind_rows()
+
+    list(
+      genes = combined$genes,
+      vars = combined$vars,
+      var_counts = all_var_counts,
+      sbs_counts = all_sbs
+    )
   }
 
-  lapply(contents, read) |> `names<-`(contents)
+  lapply(contents, read) |> `names<-`(names(contents))
 }
 
 #' Read sample specification files for variant data
@@ -604,7 +614,7 @@ read_variant_spec_all <- function(cfg, allowed_exts = c("vcf", "vcf.gz")) {
       for (ttype in names(lst)) {
         prev <- per_ttypes[[tb_name]][[ttype]]
         cur <- lst[[ttype]][[tb_name]]
-        per_ttypes[[tb_name]][[ttype]] <- dplyr::bind_rows(previous, cur)
+        per_ttypes[[tb_name]][[ttype]] <- dplyr::bind_rows(prev, cur)
       }
     }
   }
