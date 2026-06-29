@@ -99,10 +99,15 @@ apptainer build --force \
 outputs = ["deploy/image.sif"]
 
 [tasks.send]
+usage = '''
+flag "--cache" help="Send cache as well" default="false"
+'''
 run = '''
 rsync deploy/image.sif $stem_ip:~/shiny_test
 rsync inst/golem-config.yml $stem_ip:~/shiny_test
-rsync -r app_cache $stem_ip:~/shiny_test/app_cache
+if [[ "${usage_remove}" == "true" ]]; then
+   rsync -r app_cache $stem_ip:~/shiny_test/app_cache
+fi
 '''
 
 [tasks.get_sample_sheet_nas]

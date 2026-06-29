@@ -38,5 +38,34 @@ TUMOR_TYPE: # top-level keys are tumor types, containing a list of count file sp
     #+end_src
     * =tsv= and =csv= count files are expected to have genes in rows and samples in columns, with a single column for gene names. Sample names must be unique
     * =h5ad= files should contain valid [[https://anndata.readthedocs.io/en/stable/][AnnData]] objects. The =obs= object of each file must contain at least a column =sample=, and optionally =tumor_type=, =treatment=, and =patient=. If not provided, the information is taken from the yaml specification
+** Exome data explorer
+#+begin_src yaml
+default:
+  exome:
+    filters: # Only allow variants that meet the following criteria
+      consequence:
+      clinsig:
+      variant_calling:
+        min_alt_depth: 3 
+        min_af: 0.3
+        max_ref_depth: 300
+    spec_directory: DIR
+#+end_src
++ Input data
+  * =spec_directory= is a directory containing yaml specification files
+  * Spec files have the following format
+    #+begin_src yaml
+TUMOR_TYPE: # top-level keys are tumor types
+  - cohort1: # OPTIONAL: name of the cohort for the following samples
+    samples: # Mapping of sample names to variant files
+        SAMPLE1: FILEPATH
+        SAMPLE2: FILEPATH
+    vcf_suffix: # OPTIONAL: suffix to append to sample names to retrieve FORMAT data from VCF files
+    vcf_prefix: # OPTIONAL: prefix to prepend to sample names to retrieve FORMAT data from VCF files  
+  - cohort2:
+     ...
+    #+end_src
+    * Accepted extensions for files in the samples map include =vcf.gz= and =vcf=
 * App configuration
-The app configuration file can be specified with the environment variable =GOLEM_CONFIG_FILE=, which is used to update the default configuration. If this isn't set, only the defaults in =inst/golem-config.yml= are used
++ The app configuration file can be specified with the environment variable =GOLEM_CONFIG_FILE=, which is used to update the default configuration. If this isn't set, only the defaults in =inst/golem-config.yml= are used
++ Use =GOLEM_CONFIG_ACTIVE= or =R_CONFIG_ACTIVE= to specify which configuration key of the file to update
