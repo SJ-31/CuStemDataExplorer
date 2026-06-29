@@ -82,7 +82,12 @@ get_vep_anno <- function(vcf, info_field = "ANN") {
   colnames <- info[rownames(info) == info_field, ]$Description |>
     stringr::str_extract("Format: (.*)", group = 1) |>
     stringr::str_split_1("\\|")
-  ann <- as.matrix(info(vcf)[[info_field]])[, 1]
+  ann <- as.matrix(info(vcf)[[info_field]])
+  if (ncol(ann) >= 1) {
+    ann <- ann[, 1]
+  } else {
+    return(NULL)
+  }
   tb <- read.table(
     textConnection(ann),
     sep = "|",
@@ -160,27 +165,32 @@ format_sample_vcf <- function(
     AF = geno(vcf)$AF[, sample_name],
     AD = geno(vcf)$AD[, sample_name],
     GT = geno(vcf)$GT[, sample_name]
-  ) |>
-    tidyr::hoist(
-      "AD",
-      AD_REF = 1,
-      .remove = TRUE
-    ) |>
-    dplyr::mutate(
-      AD_MAX = purrr::map_dbl(AD, max),
-      AD = purrr::map_chr(AD, \(x) paste0(as.character(x), collapse = ","))
-    )
+  )
+
+  if ("AD" %in% colnames(from_geno)) {
+    from_geno <- tidyr::hoist(from_geno, "AD", AD_REF = 1, .remove = TRUE) |>
+      dplyr::mutate(
+        AD_MAX = purrr::map_dbl(AD, max),
+        AD = purrr::map_chr(AD, \(x) paste0(as.character(x), collapse = ","))
+      )
+  }
 
   if (!is.null(filters)) {
     if (
-      "min_alt_depth" %in% names(filters) && !is.null(filters$min_alt_depth)
+      "min_alt_depth" %in%
+        names(filters) &&
+        !is.null(filters$min_alt_depth) &&
+        "AD_MAX" %in% colnames(from_geno)
     ) {
       mask <- from_geno$AD_MAX >= filters$min_alt_depth
       vcf <- vcf[mask, ]
       from_geno <- from_geno[mask, ]
     }
     if (
-      "max_ref_depth" %in% names(filters) && !is.null(filters$max_ref_depth)
+      "max_ref_depth" %in%
+        names(filters) &&
+        !is.null(filters$max_ref_depth) &&
+        "AD_REF" %in% colnames(from_geno)
     ) {
       mask <- from_geno$AD_REF < filters$max_ref_depth
       vcf <- vcf[mask, ]
@@ -194,6 +204,9 @@ format_sample_vcf <- function(
   }
 
   anno <- get_vep_anno(vcf)
+  if (is.null(anno)) {
+    stop(sprintf("No variants in file %s", vcf_file))
+  }
 
   # Deduplicate
   granges <- MatrixGenerics::rowRanges(vcf)
@@ -281,7 +294,7 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
           lapply(
             col,
             \(e) {
-              if (nchar(e) == 0) {
+              if (is.na(e) || nchar(e) == 0) {
                 character(0)
               } else {
                 stringr::str_split_1(e, "&")
@@ -552,11 +565,18 @@ read_variant_spec <- function(file, cfg) {
 
       res <- lapply(snames, \(n) {
         vcf_key <- glue::glue("{prefix}{n}{suffix}")
-        tmp <- format_sample_vcf(
-          lst$samples[[n]],
-          sample_name = vcf_key,
-          filters = vc_filters
+        tmp <- NULL
+        try(
+          tmp <- format_sample_vcf(
+            lst$samples[[n]],
+            sample_name = vcf_key,
+            filters = vc_filters
+          )
         )
+        if (is.null(tmp)) {
+          logger::log_warn(sprintf("Failed to read from sample file %s", n))
+          return(tmp)
+        }
         if (!is.null(lst$cohort)) {
           combine_key <- glue::glue("{cohort}::{vcf_key}")
         } else {
