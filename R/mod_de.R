@@ -147,6 +147,7 @@ mod_de_server <- function(id, cached, expression_key) {
 
     ## * Plots & tables
     output$volcano <- shiny::renderPlot({
+      req(input$contrast)
       input$reset_palette
       volcano_plot(
         get_contrast(
@@ -159,15 +160,16 @@ mod_de_server <- function(id, cached, expression_key) {
       shiny::bindCache(input$contrast, input$reset_palette) |>
       shiny::bindEvent(input$contrast, input$reset_palette)
 
-    output$de_results <- reactable::renderReactable(reactable(
-      get_contrast(
-        input$contrast
-      ),
-      columns = de_col_format,
-      selection = "multiple",
-      searchable = TRUE,
-      onClick = "select"
-    )) |>
+    output$de_results <- reactable::renderReactable({
+      req(input$contrast)
+      reactable(
+        get_contrast(input$contrast),
+        columns = de_col_format,
+        selection = "multiple",
+        searchable = TRUE,
+        onClick = "select"
+      )
+    }) |>
       shiny::bindCache(input$contrast) |>
       shiny::bindEvent(input$contrast)
 
