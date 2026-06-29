@@ -85,7 +85,34 @@ get_cache_spec <- function(cfg = NULL, cache, bfc) {
       "sc_pseudobulk_expression",
       cache = cache,
       cache_key = "sc_psbulk_expr"
-    )
+    ),
+    cache_exome(cfg, cache = cache, bfc = bfc, cfg_key = "exome"),
+    cache_exome(cfg, cache = cache, bfc = bfc, cfg_key = "exome_sv")
+  )
+}
+
+cache_exome <- function(cfg, cache, bfc, cfg_key) {
+  list(
+    name = cfg_key,
+    fn = \() {
+      data <- read_variant_spec_all(cfg[[cfg_key]])
+
+      sapply(
+        names(data),
+        \(name) {
+          key <- paste0(cfg_key, "_", name)
+          db_path <- BiocFileCache::bfcnew(bfc, key, ext = ".db")
+          cur <- data[[name]]
+          con <- duckdb::dbConnect(duckdb::duckdb(), dbdir = db_path)
+          for (ttype in names(cur)) {
+            duckdb::dbWriteTable(con, ttype, cur[[ttype]])
+          }
+          db_path
+        },
+        simplify = FALSE,
+        USE.NAMES = TRUE
+      )
+    }
   )
 }
 
