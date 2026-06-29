@@ -393,8 +393,7 @@ GENE_VARIANT_COLS_DOWNLOAD <- c(
   "Consequence",
   "Existing variation",
   "Exon/Intron"
-) |>
-  to_js_array()
+)
 
 variant_table_download_button <- function(title, elementId, file = "data.csv") {
   cols <- c(
@@ -404,15 +403,14 @@ variant_table_download_button <- function(title, elementId, file = "data.csv") {
     "Feature",
     "Biotype",
     "Canonical",
-    "N",
-    "Consequence counts"
+    "N"
   ) |>
     to_js_array()
   onclick <- sprintf(
-    "Reactable.downloadDataCSV(%s, '%s', {
+    "Reactable.downloadDataCSV('%s', '%s', {
 columnIds: %s
 })",
-    elementId,
+    elementId, # Pass the outputId of the reactable
     file,
     cols
   )
@@ -423,11 +421,10 @@ columnIds: %s
 #'
 #' @param gene_tb tibble returned from `combine_vcf_tbs$grouped`
 #'
-make_variant_table <- function(gene_tb, elementId = NULL) {
+make_variant_table <- function(gene_tb) {
   box::use(reactable[reactable, colGroup, colDef])
   reactable(
     tibble::rowid_to_column(dplyr::select(gene_tb, -data), "Download"),
-    elementId = elementId %||% "variant_table",
     searchable = TRUE,
     columns = list(
       Download = colDef(
@@ -439,12 +436,12 @@ make_variant_table <- function(gene_tb, elementId = NULL) {
 columnIds: %s
 })",
             table_name,
-            GENE_VARIANT_COLS_DOWNLOAD
+            to_js_array(GENE_VARIANT_COLS_DOWNLOAD)
           )
           htmltools::tags$button(
             "📥",
             onclick = onclick,
-            style = "background-color:white;border-color:white"
+            style = "background-color:white;border-color:white;box-shadow:none"
           )
         }
       ),
