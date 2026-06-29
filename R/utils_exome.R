@@ -383,16 +383,71 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
   list(genes = grouped, vars = comb)
 }
 
+GENE_VARIANT_COLS_DOWNLOAD <- c(
+  "HGVSp",
+  "HGVSg",
+  "HGVSc",
+  "Sample count",
+  "Sample",
+  "PubMed",
+  "Consequence",
+  "Existing variation",
+  "Exon/Intron"
+) |>
+  to_js_array()
+
+variant_table_download_button <- function(title, elementId, file = "data.csv") {
+  cols <- c(
+    "Symbol",
+    "Gene",
+    "Feature type",
+    "Feature",
+    "Biotype",
+    "Canonical",
+    "N",
+    "Consequence counts"
+  ) |>
+    to_js_array()
+  onclick <- sprintf(
+    "Reactable.downloadDataCSV(%s, '%s', {
+columnIds: %s
+})",
+    elementId,
+    file,
+    cols
+  )
+  htmltools::tags$button(title, onclick = onclick)
+}
+
 #' Produce interactive reactable to explore variant data
 #'
 #' @param gene_tb tibble returned from `combine_vcf_tbs$grouped`
 #'
-make_variant_table <- function(gene_tb) {
+make_variant_table <- function(gene_tb, elementId = NULL) {
   box::use(reactable[reactable, colGroup, colDef])
   reactable(
-    dplyr::select(gene_tb, -data),
+    tibble::rowid_to_column(dplyr::select(gene_tb, -data), "Download"),
+    elementId = elementId %||% "variant_table",
     searchable = TRUE,
     columns = list(
+      Download = colDef(
+        align = "center",
+        cell = \(v, i, n) {
+          table_name <- sprintf("nested_%s", v)
+          onclick <- sprintf(
+            "Reactable.downloadDataCSV('%s', 'data.csv', {
+columnIds: %s
+})",
+            table_name,
+            GENE_VARIANT_COLS_DOWNLOAD
+          )
+          htmltools::tags$button(
+            "📥",
+            onclick = onclick,
+            style = "background-color:white;border-color:white"
+          )
+        }
+      ),
       `Consequence counts` = colDef(
         cell = \(v, i, n) sum(v),
         html = TRUE,
@@ -412,8 +467,9 @@ make_variant_table <- function(gene_tb) {
     details = function(index) {
       cur <- gene_tb$data[[index]]
       reactable(
-        dplyr::select(cur, -Sample),
+        cur,
         compact = TRUE,
+        elementId = sprintf("nested_%s", index),
         searchable = TRUE,
         columns = list(
           `Sample count` = colDef(html = TRUE, details = \(i) {
@@ -421,6 +477,7 @@ make_variant_table <- function(gene_tb) {
               html_with_header("Sample names") |>
               html_pad_div()
           }),
+          Sample = colDef(show = FALSE),
           `Existing variation` = colDef(
             html = TRUE,
             cell = \(v, i, n) length(v),

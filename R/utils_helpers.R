@@ -182,6 +182,11 @@ prettify_text <- function(text) {
   }
 }
 
+to_js_array <- function(vec) {
+  tmp <- paste0("'", vec, "'", collapse = ",")
+  sprintf("[%s]", tmp)
+}
+
 add_palette_from_cache <- function(
   plot,
   key,
