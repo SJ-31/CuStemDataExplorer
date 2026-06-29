@@ -13,6 +13,7 @@ app_server <- function(input, output, session) {
     "compare_expression_1",
     cached = "bulk_expression"
   )
+  mod_exome_server("exome_1", cached = "exome")
   mod_compare_expression_server(
     "compare_expression_2",
     cached = "sc_pseudobulk_expression"
