@@ -1,6 +1,6 @@
 count_sbs <- function(vcf) {
   box::use(dplyr[replace_values, case_when, rename])
-  subs <- mcols(vcf)[
+  subs <- S4Vectors::mcols(vcf)[
     VariantAnnotation::isSubstitution(vcf) &
       VariantAnnotation::isSNV(vcf),
   ]
@@ -142,8 +142,19 @@ format_sample_vcf <- function(
     "PubMed"
   )
 ) {
-  box::use(VariantAnnotation[geno, info], tibble[tibble])
+  box::use(
+    VariantAnnotation[geno, info, `info<-`, header, samples],
+    tibble[tibble]
+  )
   vcf <- VariantAnnotation::readVcf(vcf_file)
+  samples <- Biobase::samples(header(vcf))
+  if (sample_name %notin% samples) {
+    stop(sprintf(
+      "Provided sample %s not present in VCF file. Available samples: %s",
+      sample_name,
+      paste0(samples, collapse = ", ")
+    ))
+  }
   # Apply filters based on vcf statistics
   from_geno <- tibble(
     AF = geno(vcf)$AF[, sample_name],
@@ -199,7 +210,10 @@ format_sample_vcf <- function(
   info(vcf)$ANN <- NULL
   info(vcf) <- suppressMessages(cbind(info(vcf), anno))
 
-  variant_counts <- lapply(info(vcf)$Consequence, \(x) str_split_1(x, "&")) |>
+  variant_counts <- lapply(
+    info(vcf)$Consequence,
+    \(x) stringr::str_split_1(x, "&")
+  ) |>
     unlist() |>
     table() |>
     as.data.frame() |>
@@ -270,7 +284,7 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
               if (nchar(e) == 0) {
                 character(0)
               } else {
-                str_split_1(e, "&")
+                stringr::str_split_1(e, "&")
               }
             }
           )
@@ -339,7 +353,7 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
       sep = "  ",
       remove = TRUE
     ) |>
-    group_by(HGVSg) |>
+    dplyr::group_by(HGVSg) |>
     dplyr::summarise(`Caller statistics` = list(`Caller statistics`))
 
   comb <- select(comb, -any_of(c(avg, "SOMATIC", "GT"))) |>
@@ -358,8 +372,8 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
     select(-Exon, -Intron)
 
   grouped <- comb |>
-    group_by(across(all_of(gene_cols))) |>
-    nest() |>
+    dplyr::group_by(across(dplyr::all_of(gene_cols))) |>
+    tidyr::nest() |>
     mutate(
       N = purrr::map_dbl(data, nrow),
       `Consequence counts` = lapply(data, \(x) table(unlist(x$Consequence))),
@@ -470,7 +484,7 @@ make_variant_table <- function(gene_tb) {
 #' The former two are aggregated and single variant statistics, respectively
 read_variant_spec <- function(file, cfg) {
   box::use(dplyr[mutate])
-  contents <- yaml::read_yaml(f)
+  contents <- yaml::read_yaml(file)
 
   read <- function(spec) {
     lapply(spec, \(lst) {
@@ -511,7 +525,7 @@ read_variant_spec <- function(file, cfg) {
     })
   }
 
-  lapply(names(contents), read) |> `names<-`(contents)
+  lapply(contents, read) |> `names<-`(contents)
 }
 
 #' Read sample specification files for variant data
@@ -523,7 +537,7 @@ read_variant_spec_all <- function(cfg, allowed_exts = c("vcf", "vcf.gz")) {
   checkmate::assert_directory_exists(dir)
   per_file <- lapply(
     list.files(dir, pattern = ".yml|yaml$", full.names = TRUE),
-    \(f) read_variant_spec(f)
+    \(f) read_variant_spec(f, cfg)
   )
   per_ttypes <- list(
     vars = list(),
