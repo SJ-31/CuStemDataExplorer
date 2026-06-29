@@ -16,12 +16,14 @@ From: rocker/verse:4.6.0
     export R_LIBS=/usr/local/lib/R/site-library
     export R_PROFILE_USER=/dev/null
     export R_ENVIRON_USER=/dev/null
+    export PATH=$PATH:/usr/local/lib/R/site-library/StemDataExplorer/
     
 %post
     apt-get update -y && apt-get install -y libreadline-dev libcurl4-openssl-dev libicu-dev libssl-dev libpng-dev python3 cmake make libuv1-dev pandoc libx11-dev zlib1g-dev libxml2-dev git && rm -rf /var/lib/apt/lists/*
     mkdir -p /usr/local/lib/R/etc/ /usr/lib/R/etc/ /tmp/renv_singularity
     Rscript -e 'install.packages("rlang")'
     Rscript -e 'install.packages("renv")'
+    Rscript -e 'install.packages("optparse")'
     Rscript -e 'install.packages("remotes")'
     export RENV_PATHS_CACHE="/tmp/renv_singularity"
     # Must bind this path in call to "apptainer build"
@@ -30,6 +32,7 @@ From: rocker/verse:4.6.0
     Rscript -e "renv::restore()"
     Rscript -e 'remotes::install_local("/opt/app.tar.gz",upgrade="never")'
     rm /opt/app.tar.gz
+    chmod +x /usr/local/lib/R/site-library/StemDataExplorer/set_up.R
     
 %startscript
     R -e "options('shiny.port'=80,shiny.host='0.0.0.0');library(StemDataExplorer);StemDataExplorer::run_app()"
