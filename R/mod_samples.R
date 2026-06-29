@@ -13,6 +13,13 @@ mod_samples_ui <- function(id, sb) {
     "Available modalities",
     bslib::layout_sidebar(
       reactable::reactableOutput(ns("sample_tab")),
+      htmltools::tags$button(
+        "Download",
+        onclick = sprintf(
+          "Reactable.downloadDataCSV('%s')",
+          ns("sample_tab")
+        )
+      ),
       sidebar = sb
     )
   )

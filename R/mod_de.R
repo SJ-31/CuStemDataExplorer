@@ -15,8 +15,19 @@ mod_de_ui <- function(id, label) {
       bslib::card(
         bslib::layout_columns(
           shiny::h3("Contrast"),
-          shiny::actionButton(ns("reset_palette"), "Reset palette"),
-          col_widths = c(10, 2)
+          shiny::actionButton(
+            ns("reset_palette"),
+            "Reset palette",
+            style = "color:white;margin: 5px;vertical-align:baseline"
+          ),
+          htmltools::tags$button(
+            "📥",
+            onclick = sprintf(
+              "Reactable.downloadDataCSV(\"%s\")",
+              ns("de_results")
+            )
+          ),
+          col_widths = c(7, 4, 1)
         ),
         shiny::selectizeInput(
           ns("contrast"),

@@ -13,6 +13,13 @@ mod_metadata_ui <- function(id, sb) {
     "Metadata",
     bslib::layout_sidebar(
       reactable::reactableOutput(ns("meta_tab")),
+      htmltools::tags$button(
+        "Download",
+        onclick = sprintf(
+          "Reactable.downloadDataCSV('%s')",
+          ns("meta_tab")
+        )
+      ),
       sidebar = sb
     ),
   )

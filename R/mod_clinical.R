@@ -13,6 +13,13 @@ mod_clinical_ui <- function(id, sb) {
     "Clinical",
     bslib::layout_sidebar(
       reactable::reactableOutput(ns("clin_tab")),
+      htmltools::tags$button(
+        "Download",
+        onclick = sprintf(
+          "Reactable.downloadDataCSV('%s')",
+          ns("clin_tab")
+        )
+      ),
       sidebar = sb
     )
   )
