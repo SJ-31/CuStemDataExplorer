@@ -389,7 +389,13 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
     tidyr::nest() |>
     mutate(
       N = purrr::map_dbl(data, nrow),
-      `Consequence counts` = lapply(data, \(x) table(unlist(x$Consequence))),
+      `Consequence counts` = lapply(
+        data,
+        \(x) {
+          tab <- table(unlist(x$Consequence))
+          tibble::tibble(key = names(tab), value = tab)
+        }
+      ),
       Canonical = dplyr::recode_values(Canonical, "YES" ~ "Y", default = "N")
     )
 
@@ -459,15 +465,15 @@ columnIds: %s
         }
       ),
       `Consequence counts` = colDef(
-        cell = \(v, i, n) sum(v),
+        cell = \(v, i, n) sum(v$value),
         html = TRUE,
         details = \(i) {
           val <- gene_tb$`Consequence counts`[[i]]
           paste0(
             "<strong>",
-            names(val),
+            val$key,
             ": </strong>",
-            val,
+            val$value,
             collapse = "<br>"
           ) |>
             html_pad_div()
