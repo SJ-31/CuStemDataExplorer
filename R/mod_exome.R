@@ -54,7 +54,8 @@ mod_exome_server <- function(id, cached) {
     make_table <- function(type) {
       data <- dbGetQuery(con, sprintf("SELECT * FROM %s", type))
       if (!get_golem_config("app_prod")) {
-        data <- data[1:500, ]
+        m <- min(nrow(data), 500)
+        data <- data[1:m, ]
       }
       make_variant_table(data)
     }
