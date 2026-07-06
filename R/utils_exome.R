@@ -232,13 +232,68 @@ format_sample_vcf <- function(
     as.data.frame() |>
     dplyr::rename(Consequence = "Var1", Count = "Freq")
 
+  ranges <- MatrixGenerics::rowRanges(vcf)
+
   tb <- dplyr::bind_cols(
     from_geno,
     dplyr::select(as.data.frame(info(vcf)), dplyr::any_of(wanted_cols))
-  )
+  ) |>
+    dplyr::mutate(
+      Position = paste0(Seqinfo::seqnames(ranges), ":", start(ranges)),
+      Identifiers = get_identifier_string(vcf)
+    )
 
   list(tb = tb, sbs_counts = count_sbs(vcf), variant_counts = variant_counts)
 }
+
+#' Aggregate all identifier information from `vcf` into a formatted multiline string
+get_identifier_string <- function(vcf) {
+  box::use(VariantAnnotation[info], S4Vectors[mcols])
+  cols <- c("HGVSp", "HGVSg", "HGVSc")
+  if ("SVTYPE" %in% colnames(info(vcf))) {
+    cols <- c(cols, "SVTYPE")
+  }
+  result <- NULL
+  exon_intron <- purrr::map2_chr(info(vcf)$Exon, info(vcf)$Intron, \(ex, int) {
+    if ((is.na(int) && is.na(ex)) || (nchar(int) == 0 && nchar(ex) == 0)) {
+      ""
+    } else if (!is.na(ex) && nchar(ex) > 0) {
+      glue::glue("{ex} (exon)")
+    } else {
+      glue::glue("{int} (intron)")
+    }
+  })
+
+  for (col in cols) {
+    nas <- is.na(info(vcf)[[col]])
+    vals <- paste0("<strong>", col, ":</strong> ", info(vcf)[[col]], "<br>")
+    result <- paste0(result, ifelse(nas, "", vals))
+  }
+  result <- paste0(
+    result,
+    "<strong>Exon/Intron</strong>: ",
+    exon_intron,
+    "<br>"
+  )
+  alt_vals <- mcols(vcf)$ALT
+  if ("DNAStringSetList" %in% class(alt_vals)) {
+    alt <- as.data.frame(alt_vals) |>
+      dplyr::group_by(group) |>
+      dplyr::summarize(value = paste0(value, collapse = ";")) |>
+      dplyr::arrange(group) |>
+      purrr::pluck("value")
+  } else {
+    alt <- as.character(alt_vals)
+  }
+  ref2alt <- paste0(
+    "<strong>REF > ALT:</strong> ",
+    as.character(mcols(vcf)$REF),
+    " > ",
+    alt
+  )
+  paste0(result, ref2alt)
+}
+
 
 filter_list_col <- function(tb, accepted, valid, column, sep = "&") {
   checkmate::assert_names(accepted, subset.of = valid)
@@ -256,7 +311,9 @@ filter_list_col <- function(tb, accepted, valid, column, sep = "&") {
 combine_vcf_tbs <- function(tbs, filters = NULL) {
   box::use(dplyr[across, any_of, mutate, select])
 
-  vep_cols <- c(
+  keep_first <- c(
+    "Position",
+    "Identifiers",
     "Impact",
     "Symbol",
     "Gene",
@@ -271,7 +328,6 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
     "HGVSg",
     "ClinSig"
   )
-
   avg <- c("AF", "AD_REF", "AD_MAX", "AN", "GERMQ", "QSS", "SomaticEVS")
   uniq <- c("GT", "Sample")
   list_uniq <- c("Consequence", "Existing_variation", "PubMed")
@@ -325,7 +381,7 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
     dplyr::group_by(HGVSg) |>
     dplyr::summarise(
       `Sample count` = length(unique(Sample)),
-      across(any_of(vep_cols), dplyr::first),
+      across(any_of(keep_first), dplyr::first),
       across(any_of(avg), \(x) mean(x, na.rm = TRUE)),
       across(any_of(uniq), \(x) list(unique(x))),
       SOMATIC = any(SOMATIC),
@@ -370,19 +426,7 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
     dplyr::summarise(`Caller statistics` = list(`Caller statistics`))
 
   comb <- select(comb, -any_of(c(avg, "SOMATIC", "GT"))) |>
-    dplyr::inner_join(stats, by = dplyr::join_by(HGVSg)) |>
-    mutate(
-      `Exon/Intron` = purrr::map2_chr(Exon, Intron, \(ex, int) {
-        if ((is.na(int) && is.na(ex)) || (nchar(int) == 0 && nchar(ex) == 0)) {
-          ""
-        } else if (!is.na(ex) && nchar(ex) > 0) {
-          glue::glue("{ex} (exon)")
-        } else {
-          glue::glue("{int} (intron)")
-        }
-      })
-    ) |>
-    select(-Exon, -Intron)
+    dplyr::inner_join(stats, by = dplyr::join_by(HGVSg))
 
   grouped <- comb |>
     dplyr::group_by(across(dplyr::all_of(gene_cols))) |>
@@ -403,6 +447,7 @@ combine_vcf_tbs <- function(tbs, filters = NULL) {
 }
 
 GENE_VARIANT_COLS_DOWNLOAD <- c(
+  "Position",
   "HGVSp",
   "HGVSg",
   "HGVSc",
@@ -410,8 +455,7 @@ GENE_VARIANT_COLS_DOWNLOAD <- c(
   "Sample",
   "PubMed",
   "Consequence",
-  "Existing variation",
-  "Exon/Intron"
+  "Existing variation"
 )
 
 variant_table_download_button <- function(title, elementId, file = "data.csv") {
@@ -513,13 +557,27 @@ columnIds: %s
             html = TRUE,
             cell = \(v, i, n) length(v),
             details = \(i) reactable_display_list(i, cur, "Consequence")
-          )
+          ),
+          Identifiers = colDef(
+            html = TRUE,
+            cell = \(v, i, n) {
+              if (!is.null(cur$HGVSp[[i]])) {
+                cur$HGVSp[[i]]
+              } else if (!is.null(cur$HGVSc[[i]])) {
+                cur$HGVSc[[i]]
+              } else if (!is.null(cur$HGVSg[[i]])) {
+                cur$HGVSg[[i]]
+              } else {
+                cur$Position[[i]]
+              }
+            },
+            details = \(i) cur$Identifiers[[i]],
+          ),
+          HGVSg = colDef(show = FALSE),
+          HGVSp = colDef(show = FALSE),
+          HGVSc = colDef(show = FALSE)
         ),
         columnGroups = list(
-          colGroup(
-            name = "Change",
-            columns = c("HGVSg", "HGVSc", "HGVSp")
-          ),
           colGroup(
             name = "Classification",
             columns = c("Consequence", "Impact", "ClinSig"),
