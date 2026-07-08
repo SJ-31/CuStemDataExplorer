@@ -34,6 +34,11 @@ app_ui <- function(request) {
         ),
         mod_de_ui("de_1", "DE Analysis: Bulk")
       ),
+      bslib::nav_menu(
+        "Exome",
+        mod_exome_ui("exome_1", "Small variants: Table"),
+        mod_exome_ui("exome_2", "Structural variants: Table")
+      ),
       theme = bslib::bs_theme(bootswatch = "flatly"),
     )
   )

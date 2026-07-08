@@ -14,6 +14,7 @@ app_server <- function(input, output, session) {
     cached = "bulk_expression"
   )
   mod_exome_server("exome_1", cached = "exome")
+  mod_exome_server("exome_2", cached = "exome_sv")
   mod_compare_expression_server(
     "compare_expression_2",
     cached = "sc_pseudobulk_expression"
