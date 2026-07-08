@@ -24,6 +24,7 @@ mod_compare_expression_ui <- function(id, label) {
         id = ns("nav")
       ),
       sidebar = bslib::sidebar(
+        shiny::downloadButton(ns("download_plot"), "Download plot"),
         shiny::conditionalPanel(
           condition = "input.nav != 'pca'",
           shiny::h4("Gene selection"),
@@ -150,27 +151,24 @@ mod_compare_expression_server <- function(id, cached) {
     })
 
     ## ** Heatmap and boxplots
-    output$expr_comparison <- shiny::renderPlot(
-      {
-        input$reset_palette
-        update_palette_input(
-          session,
-          input,
-          "palette_choices",
-          key_group = cached
-        )
-        do_expr_plot(
-          combined_expr,
-          genes = input$gene_selection,
-          cfg = cfg$palette %||% list(),
-          tumor_types = input$tumor_type,
-          key_group = cached,
-          cohorts = input$cohort,
-          group_by = input$group_by
-        )
-      },
-      res = 120
-    ) |>
+    comparison_plot_reactive <- reactive({
+      input$reset_palette
+      update_palette_input(
+        session,
+        input,
+        "palette_choices",
+        key_group = cached
+      )
+      do_expr_plot(
+        combined_expr,
+        genes = input$gene_selection,
+        cfg = cfg$palette %||% list(),
+        tumor_types = input$tumor_type,
+        key_group = cached,
+        cohorts = input$cohort,
+        group_by = input$group_by
+      )
+    }) |>
       shiny::bindCache(
         input$gene_selection,
         input$tumor_type,
@@ -185,6 +183,7 @@ mod_compare_expression_server <- function(id, cached) {
         input$group_by,
         cur_palettes()
       )
+    output$expr_comparison <- renderPlot(comparison_plot_reactive(), res = 120)
 
     ## ** PCA
 
@@ -197,21 +196,18 @@ mod_compare_expression_server <- function(id, cached) {
       )
     )
 
-    output$pca <- shiny::renderPlot(
-      {
-        input$reset_palette
-        plot <- plot_pca(
-          pca,
-          combined_expr,
-          color_by = input$color_by,
-          tumor_types = input$tumor_type,
-          cohorts = input$cohort,
-          key_group = pca_key
-        )
-        plot
-      },
-      res = 120
-    ) |>
+    pca_plot_reactive <- reactive({
+      input$reset_palette
+      plot <- plot_pca(
+        pca,
+        combined_expr,
+        color_by = input$color_by,
+        tumor_types = input$tumor_type,
+        cohorts = input$cohort,
+        key_group = pca_key
+      )
+      plot
+    }) |>
       shiny::bindCache(
         input$tumor_type,
         input$cohort,
@@ -224,6 +220,32 @@ mod_compare_expression_server <- function(id, cached) {
         input$color_by,
         input$reset_palette
       )
+    output$pca <- shiny::renderPlot(pca_plot_reactive(), res = 120)
+
+    ## ** Save plot
+    output$download_plot <- shiny::downloadHandler(
+      filename = \() {
+        paste0(input$nav, ".pdf")
+      },
+      content = \(file) {
+        if (input$nav != "pca") {
+          width <- 8 +
+            as.integer(log2(length(unique(combined_expr$meta$sample))))
+          height <- 7 + as.integer(log2(length(input$gene_selection)))
+          plot <- comparison_plot_reactive()
+        } else {
+          width <- 9
+          height <- 9
+          plot <- pca_plot_reactive()
+        }
+        suppressMessages(ggplot2::ggsave(
+          filename = file,
+          plot = plot,
+          width = ifelse(is.na(width), 8, width),
+          height = ifelse(is.na(height), 7, height)
+        ))
+      }
+    )
 
     ## ** Update selection
     observeEvent(input$nav, {
