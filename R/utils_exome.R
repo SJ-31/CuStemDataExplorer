@@ -239,7 +239,11 @@ format_sample_vcf <- function(
     dplyr::select(as.data.frame(info(vcf)), dplyr::any_of(wanted_cols))
   ) |>
     dplyr::mutate(
-      Position = paste0(Seqinfo::seqnames(ranges), ":", start(ranges)),
+      Position = paste0(
+        Seqinfo::seqnames(ranges),
+        ":",
+        BiocGenerics::start(ranges)
+      ),
       Identifiers = get_identifier_string(vcf)
     )
 
@@ -561,11 +565,11 @@ columnIds: %s
           Identifiers = colDef(
             html = TRUE,
             cell = \(v, i, n) {
-              if (!is.null(cur$HGVSp[[i]])) {
+              if (!is.na(cur$HGVSp[[i]])) {
                 cur$HGVSp[[i]]
-              } else if (!is.null(cur$HGVSc[[i]])) {
+              } else if (!is.na(cur$HGVSc[[i]])) {
                 cur$HGVSc[[i]]
-              } else if (!is.null(cur$HGVSg[[i]])) {
+              } else if (!is.na(cur$HGVSg[[i]])) {
                 cur$HGVSg[[i]]
               } else {
                 cur$Position[[i]]
