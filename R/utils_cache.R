@@ -23,6 +23,7 @@ cache_pca <- function(key, cache, cache_key, remove = TRUE) {
 #' fn: a function of no arguments that returns the object to cache
 #' usage: string listing the modules, features the object is required by.
 #'      for logging and debugging purposes when the cache is empty
+#' @export
 get_cache_spec <- function(cfg = NULL, cache, bfc) {
   list(
     list(

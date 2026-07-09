@@ -2,20 +2,23 @@ Package: StemDataExplorer
 Title: An Amazing Shiny App
 Version: 0.0.0.9000
 Authors@R: 
-    person("firstname", "lastname", , "your@email.com", role = c("aut", "cre"))
+    person("Shann", "Chongwattananukul", , "your@email.com", role = c("aut", "cre"))
 Description: What the package does (one paragraph).
 License: What license is it under?
 Depends: 
     R (>= 3.5)
 Imports: 
     anndataR,
+    Biobase,
     BiocFileCache,
+    BiocGenerics,
     box,
     bslib,
     cachem,
     checkmate,
     config,
     crosstalk,
+    DBI,
     DESeq2,
     dplyr,
     duckdb,
@@ -27,7 +30,9 @@ Imports:
     glue,
     golem,
     googlesheets4,
+    htmltools,
     logger,
+    MatrixGenerics,
     paletteer,
     patchwork,
     pointblank,
@@ -35,13 +40,16 @@ Imports:
     reactable,
     readr,
     rlang,
+    S4Vectors,
     scrapper,
+    Seqinfo,
     shiny,
     stringr,
     SummarizedExperiment,
     tibble,
     tidyr,
     tools,
+    VariantAnnotation,
     yaml
 Config/roxygen2/version: 8.0.0
 Encoding: UTF-8

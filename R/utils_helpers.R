@@ -219,6 +219,7 @@ add_palette_from_cache <- function(
 #' Retrieve the most recently saved resource `rname` from the
 #' global cache
 #'
+#' @export
 from_bfc <- function(q, as_row = FALSE, bfc = BFC, read = TRUE) {
   query_res <- BiocFileCache::bfcquery(bfc, q) |>
     dplyr::filter(rname == q)
