@@ -626,6 +626,7 @@ read_variant_spec <- function(file, cfg) {
     from_cohort <- lapply(spec, \(lst) {
       cohort <- lst$cohort %||% "-"
       prefix <- lst$prefix %||% ""
+      new_prefix <- lst$new_prefix %||% ""
       suffix <- lst$suffix %||% ""
       snames <- names(lst$samples)
 
@@ -645,21 +646,20 @@ read_variant_spec <- function(file, cfg) {
           logger::log_warn(sprintf("Failed to read from sample file %s", n))
           return(tmp)
         }
+        combine_key <- glue::glue("{new_prefix}{n}")
         if (!is.null(lst$cohort)) {
-          combine_key <- glue::glue("{cohort}::{vcf_key}")
-        } else {
-          combine_key <- vcf_key
+          combine_key <- glue::glue("{cohort}::{combine_key}")
         }
         to_combine[[combine_key]] <<- tmp$tb
 
         tmp$tb <- NULL
-        tmp$sbs_counts$sample <- n
+        tmp$sbs_counts$sample <- paste0(new_prefix, n)
         tmp$sbs_counts$cohort <- cohort
         tmp$variant_counts$cohort <- cohort
-        tmp$variant_counts$sample <- n
+        tmp$variant_counts$sample <- paste0(new_prefix, n)
         tmp
       }) |>
-        `names<-`(snames)
+        `names<-`(paste0(new_prefix, snames))
 
       sbs <- dplyr::bind_rows(lapply(res, \(x) x$sbs_counts))
       var_counts <- dplyr::bind_rows(lapply(res, \(x) x$variant_counts))
