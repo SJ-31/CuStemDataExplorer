@@ -5,6 +5,17 @@ browse = "firefox http://127.0.0.1:23461/"
 env = { GOLEM_CONFIG_ACTIVE = "dev" }
 run = "Rscript -e 'golem::run_dev()'"
 
+[tasks.r_build]
+run = """
+#!/usr/bin/env Rscript
+tarball <- devtools::build(path = 'deploy')
+file.rename(tarball, 'deploy/app.tar.gz')
+renv::snapshot(exclude = c('StemDataExplorer', 'covrpage'),
+               lockfile = 'deploy/renv.lock.prod',
+               update = TRUE)
+"""
+outputs = ["deploy/renv.lock.prod", "deploy/app.tar.gz"]
+
 [tasks.get_docker_file]
 shell = "Rscript -e"
 run = '''
@@ -88,7 +99,7 @@ fi
 
 [tasks.apptainer_build]
 dir = "./deploy"
-depends = ["get_docker_file"]
+depends = ["r_build"]
 sources = ["deploy/image.def"]
 run = '''
 export APPTAINER_TMPDIR=/home/shannc/Bio_SDD/build
@@ -100,13 +111,13 @@ outputs = ["deploy/image.sif"]
 
 [tasks.send]
 usage = '''
-flag "--cache" help="Send cache as well" default="false"
+flag "--cache" help="Send image file" default="false"
 '''
 run = '''
-rsync deploy/image.sif $stem_ip:~/shiny_test
-rsync inst/golem-config.yml $stem_ip:~/shiny_test
 if [[ "${usage_remove}" == "true" ]]; then
-   rsync -r app_cache $stem_ip:~/shiny_test/app_cache
+   rsync -r app_cache $stem_ip:~/remote/repos/StemDataExplorer/image.sif
+else
+   rsync deploy/image.sif $stem_ip:~/remote/repos/StemDataExplorer/image.sif
 fi
 '''
 
