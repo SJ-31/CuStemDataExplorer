@@ -56,6 +56,14 @@ if (sys.nframe() == 0) {
   )
   parser <- add_option(
     parser,
+    c("-d", "--gs4_deauth"),
+    type = "character",
+    help = "De-authorize googlesheets4. Use if accessed data are in public sheets",
+    default = FALSE,
+    action = "store_true"
+  )
+  parser <- add_option(
+    parser,
     c("-r", "--remove"),
     action = "store_true",
     type = "logical",
@@ -63,7 +71,13 @@ if (sys.nframe() == 0) {
     default = FALSE
   )
   args <- parse_args(parser)
+  message(glue::glue(
+    "Reading from config file {args$file} with key {args$config}"
+  ))
   cfg <- config::get(file = args$file, config = args$config)
+  if (args$gs4_deauth) {
+    googlesheets4::gs4_deauth()
+  }
   if (args$remove) {
     BiocFileCache::removebfc(
       BiocFileCache::BiocFileCache(cfg$cache),
