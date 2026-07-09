@@ -30,7 +30,7 @@ read_anndata_pb <- function(
   convert_names_to = "symbol",
   sample_col = "sample"
 ) {
-  box::use(SingleCellExperiment[colData])
+  box::use(SingleCellExperiment[colData], rhdf5[H5Aopen])
   adata <- anndataR::read_h5ad(file, as = "SingleCellExperiment")
   bulked <- scrapper::aggregateAcrossCells.se(
     adata,
