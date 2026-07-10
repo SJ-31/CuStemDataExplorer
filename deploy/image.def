@@ -1,13 +1,11 @@
 Bootstrap: docker
 From: rocker/verse:4.6.0
-# Run golem::add_dockerfile_with_renv(open = FALSE, output_dir = "deploy") first
-# to get the app tarball
 
 # Make sure to run with --no-home to stop user R profile from
 # polluting the inner R
 
 %files
-    StemDataExplorer_*.tar.gz /opt/app.tar.gz    
+    app.tar.gz /opt/app.tar.gz    
     renv.lock.prod renv.lock
     
 %environment
@@ -23,7 +21,6 @@ From: rocker/verse:4.6.0
     mkdir -p /usr/local/lib/R/etc/ /usr/lib/R/etc/ /tmp/renv_singularity
     Rscript -e 'install.packages("rlang")'
     Rscript -e 'install.packages("renv")'
-    Rscript -e 'install.packages("optparse")'
     Rscript -e 'install.packages("remotes")'
     export RENV_PATHS_CACHE="/tmp/renv_singularity"
     # Must bind this path in call to "apptainer build"
