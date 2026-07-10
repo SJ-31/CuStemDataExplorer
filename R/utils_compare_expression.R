@@ -219,8 +219,10 @@ deseq2_normalize <- function(obj, method = "vst", kws = list()) {
   } else {
     design <- "~ tumor_type"
   }
+  counts <- tibble::column_to_rownames(obj$expr, var = "gene_id")
+  counts[is.na(counts)] <- 0 # zeroes are allowed
   dds <- DESeq2::DESeqDataSetFromMatrix(
-    countData = tibble::column_to_rownames(obj$expr, var = "gene_id"),
+    countData = counts,
     colData = obj$meta,
     design = as.formula(design)
   )

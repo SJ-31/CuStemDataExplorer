@@ -151,6 +151,9 @@ format_sample_vcf <- function(
     VariantAnnotation[geno, info, `info<-`, header, samples],
     tibble[tibble]
   )
+  if (file.size(vcf_file) == 0) {
+    stop(sprintf("VCF file %s is empty", vcf_file))
+  }
   vcf <- VariantAnnotation::readVcf(vcf_file)
   samples <- Biobase::samples(header(vcf))
   if (sample_name %notin% samples) {
@@ -259,13 +262,16 @@ get_identifier_string <- function(vcf) {
   }
   result <- NULL
   exon_intron <- purrr::map2_chr(info(vcf)$Exon, info(vcf)$Intron, \(ex, int) {
-    if ((is.na(int) && is.na(ex)) || (nchar(int) == 0 && nchar(ex) == 0)) {
-      ""
-    } else if (!is.na(ex) && nchar(ex) > 0) {
-      glue::glue("{ex} (exon)")
-    } else {
-      glue::glue("{int} (intron)")
-    }
+    val <- ""
+    val <- try({
+      if ((is.na(int) && is.na(ex)) || (nchar(int) == 0 && nchar(ex) == 0)) {
+        ""
+      } else if (!is.na(ex) && nchar(ex) > 0) {
+        glue::glue("{ex} (exon)")
+      } else {
+        glue::glue("{int} (intron)")
+      }
+    })
   })
 
   for (col in cols) {
@@ -643,7 +649,11 @@ read_variant_spec <- function(file, cfg) {
           )
         )
         if (is.null(tmp)) {
-          logger::log_warn(sprintf("Failed to read from sample file %s", n))
+          logger::log_warn(sprintf(
+            "Failed to read from file %s for sample %s",
+            lst$samples[[n]],
+            n
+          ))
           return(tmp)
         }
         combine_key <- glue::glue("{new_prefix}{n}")
