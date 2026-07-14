@@ -13,6 +13,7 @@ mod_exome_ui <- function(id, label) {
     label,
     bslib::layout_sidebar(
       reactable::reactableOutput(ns("table")),
+      reactable::reactableOutput(ns("vtable")),
       sidebar = bslib::sidebar(
         shiny::h3("Tumor type"),
         shiny::selectizeInput(
@@ -53,17 +54,39 @@ mod_exome_server <- function(id, cached) {
 
     make_table <- function(type) {
       data <- dbGetQuery(con, sprintf("SELECT * FROM %s", type))
-      if (!get_golem_config("app_prod")) {
-        m <- min(nrow(data), 500)
-        data <- data[1:m, ]
-      }
-      make_variant_table(data)
+      make_variant_table_at_level(data, level = "genes")
     }
+
+    chosen_index <- reactive({
+      reactable::getReactableState("table", name = "selected")
+    })
+
+    make_vtable <- function(type, index) {
+      data <- dbGetQuery(con, sprintf("SELECT * FROM %s", type))
+      make_variant_table_at_level(
+        data,
+        level = "variants",
+        chosen = data[index, ]$Gene
+      )
+    }
+
+    # Could also make a separate view of the variant-level details, rather than have it be a nested table
+    # could make things faster
 
     output$table <- reactable::renderReactable({
       req(input$ttype)
       make_table(input$ttype)
-    })
+    }) |>
+      shiny::bindCache(input$ttype) |>
+      shiny::bindEvent(input$ttype)
+
+    output$vtable <- reactable::renderReactable({
+      req(input$ttype)
+      req(chosen_index())
+      make_vtable(input$ttype, chosen_index())
+    }) |>
+      shiny::bindCache(input$ttype, chosen_index()) |>
+      shiny::bindEvent(input$ttype, chosen_index())
   })
 }
 

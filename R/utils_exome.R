@@ -490,6 +490,121 @@ columnIds: %s
   htmltools::tags$button(title, onclick = onclick)
 }
 
+make_variant_table_at_level <- function(
+  gene_tb,
+  level = "genes",
+  chosen = NULL
+) {
+  checkmate::assert_choice(level, c("genes", "variants"))
+  box::use(reactable[reactable, colGroup, colDef])
+  if (level == "genes") {
+    reactable(
+      dplyr::select(gene_tb, -data),
+      searchable = TRUE,
+      selection = "single",
+      defaultPageSize = 5,
+      columns = list(
+        `Consequence counts` = colDef(
+          cell = \(v, i, n) sum(v$value),
+          html = TRUE,
+          details = \(i) {
+            val <- gene_tb$`Consequence counts`[[i]]
+            paste0(
+              "<strong>",
+              val$key,
+              ": </strong>",
+              val$value,
+              collapse = "<br>"
+            ) |>
+              html_pad_div()
+          }
+        )
+      ),
+      borderless = TRUE,
+      theme = reactable::reactableTheme(
+        borderColor = "#7eccd3"
+      )
+    )
+  } else {
+    cols_remove <- colnames(gene_tb)
+    cur <- tidyr::unnest(gene_tb, data) |>
+      dplyr::filter(Gene == chosen) |>
+      dplyr::select(-dplyr::any_of(cols_remove))
+    reactable(
+      cur,
+      compact = TRUE,
+      searchable = TRUE,
+      columns = list(
+        `Sample count` = colDef(html = TRUE, details = \(i) {
+          html_join_newlines(cur$Sample[[i]]) |>
+            html_with_header("Sample names") |>
+            html_pad_div()
+        }),
+        Sample = colDef(show = FALSE),
+        `Existing variation` = colDef(
+          html = TRUE,
+          cell = \(v, i, n) length(v),
+          details = \(i) reactable_display_list(i, cur, "Existing variation")
+        ),
+        PubMed = colDef(
+          html = TRUE,
+          cell = \(v, i, n) length(v),
+          details = \(i) reactable_display_list(i, cur, "PubMed")
+        ),
+        `Caller statistics` = colDef(
+          html = TRUE,
+          cell = \(v, i, n) "",
+          details = \(i) reactable_display_list(i, cur, "Caller statistics")
+        ),
+        Consequence = colDef(
+          html = TRUE,
+          cell = \(v, i, n) length(v),
+          details = \(i) reactable_display_list(i, cur, "Consequence")
+        ),
+        Identifiers = colDef(
+          html = TRUE,
+          cell = \(v, i, n) {
+            if (!is.na(cur$HGVSp[[i]])) {
+              cur$HGVSp[[i]]
+            } else if (!is.na(cur$HGVSc[[i]])) {
+              cur$HGVSc[[i]]
+            } else if (!is.na(cur$HGVSg[[i]])) {
+              cur$HGVSg[[i]]
+            } else {
+              cur$Position[[i]]
+            }
+          },
+          details = \(i) cur$Identifiers[[i]],
+        ),
+        HGVSg = colDef(show = FALSE),
+        HGVSp = colDef(show = FALSE),
+        HGVSc = colDef(show = FALSE)
+      ),
+      columnGroups = list(
+        colGroup(
+          name = "Classification",
+          columns = c("Consequence", "Impact", "ClinSig"),
+        ),
+        colGroup(
+          name = "External links",
+          columns = c("Existing variation", "PubMed")
+        )
+      ),
+      bordered = TRUE,
+      theme = reactable::reactableTheme(
+        backgroundColor = "#c3e7eb",
+        headerStyle = list(backgroundColor = "#559f9f", color = "#feffff"),
+        borderColor = "#feffff",
+        groupHeaderStyle = list(
+          backgroundColor = "#feffff",
+          color = "#509d9d"
+        ),
+        searchInputStyle = list(width = "100%")
+      )
+    )
+  }
+}
+
 #' Produce interactive reactable to explore variant data
 #'
 #' @param gene_tb tibble returned from `combine_vcf_tbs$grouped`
