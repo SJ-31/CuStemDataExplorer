@@ -468,8 +468,11 @@ GENE_VARIANT_COLS_DOWNLOAD <- c(
   "Existing variation"
 )
 
-variant_table_download_button <- function(title, elementId, file = "data.csv") {
-  cols <- c(
+variant_table_download_button <- function(
+  title,
+  elementId,
+  file = "data.csv",
+  cols = c(
     "Symbol",
     "Gene",
     "Feature type",
@@ -477,8 +480,9 @@ variant_table_download_button <- function(title, elementId, file = "data.csv") {
     "Biotype",
     "Canonical",
     "N"
-  ) |>
-    to_js_array()
+  )
+) {
+  cols <- to_js_array(cols)
   onclick <- sprintf(
     "Reactable.downloadDataCSV('%s', '%s', {
 columnIds: %s

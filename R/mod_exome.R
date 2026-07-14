@@ -22,8 +22,21 @@ mod_exome_ui <- function(id, label) {
           choices = NULL,
           multiple = FALSE
         ),
-        variant_table_download_button("Download", ns("table"))
-      )
+        variant_table_download_button("Download", ns("table")),
+        shiny::br(),
+        shiny::h3("Selected gene:"),
+        shiny::htmlOutput(ns("shown_gene")),
+        shiny::conditionalPanel(
+          condition = "output.shown_gene",
+          variant_table_download_button(
+            "Download",
+            ns("vtable"),
+            cols = GENE_VARIANT_COLS_DOWNLOAD
+          ),
+          ns = ns
+        )
+      ),
+      fillable = FALSE
     )
   )
 }
@@ -57,16 +70,24 @@ mod_exome_server <- function(id, cached) {
       make_variant_table_at_level(data, level = "genes")
     }
 
-    chosen_index <- reactive({
-      reactable::getReactableState("table", name = "selected")
+    chosen_row <- reactive({
+      req(input$ttype)
+      idx <- reactable::getReactableState("table", name = "selected")
+      req(idx)
+      query <- sprintf(
+        "SELECT * FROM %s OFFSET %s ROWS FETCH NEXT 1 ROWS ONLY",
+        input$ttype,
+        idx - 1
+      )
+      dbGetQuery(con, query)
     })
 
-    make_vtable <- function(type, index) {
+    make_vtable <- function(type, row) {
       data <- dbGetQuery(con, sprintf("SELECT * FROM %s", type))
       make_variant_table_at_level(
         data,
         level = "variants",
-        chosen = data[index, ]$Gene
+        chosen = row$Gene
       )
     }
 
@@ -80,13 +101,17 @@ mod_exome_server <- function(id, cached) {
       shiny::bindCache(input$ttype) |>
       shiny::bindEvent(input$ttype)
 
+    output$shown_gene <- renderUI({
+      shiny::h5(chosen_row()$Symbol)
+    })
+
     output$vtable <- reactable::renderReactable({
       req(input$ttype)
-      req(chosen_index())
-      make_vtable(input$ttype, chosen_index())
+      req(chosen_row())
+      make_vtable(input$ttype, chosen_row())
     }) |>
-      shiny::bindCache(input$ttype, chosen_index()) |>
-      shiny::bindEvent(input$ttype, chosen_index())
+      shiny::bindCache(input$ttype, chosen_row()) |>
+      shiny::bindEvent(input$ttype, chosen_row())
   })
 }
 
