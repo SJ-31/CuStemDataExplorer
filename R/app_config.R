@@ -13,19 +13,13 @@ app_sys <- function(...) {
 }
 
 golem_config_env <- function() {
-  env_lookup <- Sys.getenv("GOLEM_CONFIG_FILE")
-  if (nchar(env_lookup) > 0) {
-    if (file.exists(env_lookup)) {
-      env_lookup
-    } else {
-      logger::log_warn(
-        "Configuration file {env_lookup} specified by GOLEM_CONFIG_FILE doesn't exist! Using only defaults"
-      )
-      NULL
-    }
-  } else {
-    NULL
-  }
+  Sys.getenv(
+    "GOLEM_CONFIG_ACTIVE",
+    Sys.getenv(
+      "R_CONFIG_ACTIVE",
+      "default"
+    )
+  )
 }
 
 #' Read App Config
@@ -39,33 +33,15 @@ golem_config_env <- function() {
 #' @noRd
 get_golem_config <- function(
   value = NULL,
-  config = Sys.getenv(
-    "GOLEM_CONFIG_ACTIVE",
-    Sys.getenv(
-      "R_CONFIG_ACTIVE",
-      "default"
-    )
-  ),
+  config = golem_config_env(),
   use_parent = TRUE,
   # Modify this if your config file is somewhere else
-  file = app_sys("golem-config.yml")
+  file = Sys.getenv("GOLEM_CONFIG_FILE", app_sys("golem-config.yml"))
 ) {
-  defaults <- config::get(
+  config::get(
     value = value,
     config = config,
     file = file,
     use_parent = use_parent
   )
-  from_env <- golem_config_env()
-  if (!is.null(from_env)) {
-    modified <- config::get(
-      value = value,
-      config = config,
-      file = from_env,
-      use_parent = TRUE
-    )
-    config::merge(defaults, modified)
-  } else {
-    defaults
-  }
 }

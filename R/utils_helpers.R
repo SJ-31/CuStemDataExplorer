@@ -240,9 +240,10 @@ from_bfc <- function(q, as_row = FALSE, bfc = BFC, read = TRUE) {
 }
 
 set_logger <- function() {
+  logger::log_info("Reading config with key {golem_config_env()}")
   file <- get_golem_config("log")
   logger::log_appender(logger::appender_tee(file))
-  logger::log_info("Logger set up")
+  logger::log_info("Logger set up, logging to {file}")
 }
 
 dispatch_normalize <- function(obj) {
