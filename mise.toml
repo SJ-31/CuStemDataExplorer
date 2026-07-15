@@ -2,10 +2,31 @@
 browse = "firefox http://127.0.0.1:23461/"
 
 [tasks.golem]
+usage = '''
+flag "-u --no_authen" help="Run without authentication" default="false"
+'''
 env = { GOLEM_CONFIG_ACTIVE = "dev" }
 run = """
 Rscript deploy/authen.R
+if [[ ${usage_no_authen} == 'true' ]]; then
+   export SHINYLOADTEST=TRUE
+fi
 Rscript -e 'golem::run_dev()'
+"""
+
+[tasks.record_session]
+run = """
+#!/usr/bin/env Rscript
+shinyloadtest::record_session('http://127.0.0.1:23461')
+"""
+
+[tasks.shinycannon]
+run = """
+java -jar shinycannon-1.2.0-85f280d.jar recording.log \
+     http://127.0.0.1:23461 \
+     --workers 5 \
+     --loaded-duration-minutes 5 \
+     --output-dir tests/shinycannon
 """
 
 [tasks.r_build]

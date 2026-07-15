@@ -2,3 +2,6 @@
 /deploy/image.sif
 /deploy/app.tar.gz
 /deploy/renv.lock.prod
+/man/
+/inst/__pycache__/
+/inst/authen.sqlite

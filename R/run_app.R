@@ -20,13 +20,19 @@ run_app <- function(
   SHEETS <<- from_bfc("sheets")
   CACHE <<- cachem::cache_mem()
 
+  if (Sys.getenv("SHINYLOADTEST") == "") {
+    logger::log_info("Loading authentication module")
+    app_ui <- shinymanager::secure_app(
+      app_ui,
+      theme = bslib::bs_theme(bootswatch = "flatly"),
+      enable_admin = TRUE
+    )
+  } else {
+    logger::log_warn("Running without authentication")
+  }
   with_golem_options(
     app = shinyApp(
-      ui = shinymanager::secure_app(
-        app_ui,
-        theme = bslib::bs_theme(bootswatch = "flatly"),
-        enable_admin = TRUE
-      ),
+      ui = app_ui,
       server = app_server,
       onStart = onStart,
       options = options,

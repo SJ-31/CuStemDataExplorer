@@ -582,7 +582,9 @@ make_variant_table_at_level <- function(
         ),
         HGVSg = colDef(show = FALSE),
         HGVSp = colDef(show = FALSE),
-        HGVSc = colDef(show = FALSE)
+        HGVSc = colDef(show = FALSE),
+        Exon = colDef(show = FALSE),
+        Intron = colDef(show = FALSE)
       ),
       columnGroups = list(
         colGroup(
