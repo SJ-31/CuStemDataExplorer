@@ -5,13 +5,6 @@
 #' @import shiny
 #' @noRd
 app_ui <- function(request) {
-  # Globals set up
-  set_logger()
-  BFC <<- get_validate_cache()
-
-  SHEETS <<- from_bfc("sheets")
-  CACHE <<- cachem::cache_mem()
-
   sheet_sidebar <- get_sheet_sidebar(SHEETS)
   tagList(
     # Leave this function for adding external resources

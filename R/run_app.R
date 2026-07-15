@@ -14,9 +14,19 @@ run_app <- function(
   uiPattern = "/",
   ...
 ) {
+  # Globals set up
+  set_logger()
+  BFC <<- get_validate_cache()
+  SHEETS <<- from_bfc("sheets")
+  CACHE <<- cachem::cache_mem()
+
   with_golem_options(
     app = shinyApp(
-      ui = app_ui,
+      ui = shinymanager::secure_app(
+        app_ui,
+        theme = bslib::bs_theme(bootswatch = "flatly"),
+        enable_admin = TRUE
+      ),
       server = app_server,
       onStart = onStart,
       options = options,

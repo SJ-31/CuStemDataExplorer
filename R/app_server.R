@@ -5,6 +5,11 @@
 #' @import shiny
 #' @noRd
 app_server <- function(input, output, session) {
+  sqlite_path <- get_golem_config("authen")
+  res_auth <- shinymanager::secure_server(
+    check_credentials = shinymanager::check_credentials(sqlite_path)
+  )
+
   mod_stats_server("stats_1", SHEETS)
   mod_clinical_server("clinical_1", SHEETS)
   mod_samples_server("samples_1", SHEETS)

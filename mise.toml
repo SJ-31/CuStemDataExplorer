@@ -3,7 +3,10 @@ browse = "firefox http://127.0.0.1:23461/"
 
 [tasks.golem]
 env = { GOLEM_CONFIG_ACTIVE = "dev" }
-run = "Rscript -e 'golem::run_dev()'"
+run = """
+Rscript deploy/authen.R
+Rscript -e 'golem::run_dev()'
+"""
 
 [tasks.r_build]
 run = """
@@ -99,10 +102,12 @@ fi
 
 [tasks.apptainer_build]
 dir = "./deploy"
+env = { GOLEM_CONFIG_ACTIVE = "production" }
 depends = ["r_build"]
 sources = ["deploy/image.def"]
 run = '''
 export APPTAINER_TMPDIR=/home/shannc/Bio_SDD/build
+Rscript authen.R 
 apptainer build --force \
           -B ~/.cache/R/renv_singularity:/tmp/renv_singularity \
           image.sif image.def
