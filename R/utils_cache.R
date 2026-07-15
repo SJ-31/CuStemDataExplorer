@@ -97,7 +97,41 @@ get_cache_spec <- function(cfg = NULL, cache, bfc) {
       cache_key = "sc_psbulk_expr"
     ),
     cache_exome(cfg, cache = cache, bfc = bfc, cfg_key = "exome"),
-    cache_exome(cfg, cache = cache, bfc = bfc, cfg_key = "exome_sv")
+    cache_exome_tables(cfg, cache = cache, bfc = bfc, cfg_key = "exome"),
+    cache_exome(cfg, cache = cache, bfc = bfc, cfg_key = "exome_sv"),
+    cache_exome_tables(cfg, cache = cache, bfc = bfc, cfg_key = "exome_sv")
+  )
+}
+
+cache_exome_tables <- function(cfg, cache, bfc, cfg_key) {
+  box::use(duckdb[duckdb], DBI[dbConnect, dbGetQuery])
+
+  list(
+    name = sprintf("%s_tables", cfg_key),
+    fn = \() {
+      con <- dbConnect(
+        duckdb(),
+        dbdir = cache$get(cfg_key)$genes,
+        read_only = TRUE
+      )
+      ttypes <- dbGetQuery(
+        con,
+        "SELECT * FROM INFORMATION_SCHEMA.TABLES"
+      )$table_name
+      sapply(
+        ttypes,
+        \(ttype) {
+          data <- dbGetQuery(con, sprintf("SELECT * FROM %s", ttype))
+          rname <- sprintf("%s_tables::%s", cfg_key, ttype)
+          path <- BiocFileCache::bfcnew(bfc, rname = rname, ext = ".rds")
+          tab <- make_variant_table_at_level(data, level = "genes")
+          saveRDS(tab, path)
+          rname
+        },
+        simplify = FALSE,
+        USE.NAMES = TRUE
+      )
+    }
   )
 }
 
@@ -122,7 +156,8 @@ cache_exome <- function(cfg, cache, bfc, cfg_key) {
         simplify = FALSE,
         USE.NAMES = TRUE
       )
-    }
+    },
+    cache = cfg_key
   )
 }
 

@@ -66,8 +66,7 @@ mod_exome_server <- function(id, cached) {
     )
 
     make_table <- function(type) {
-      data <- dbGetQuery(con, sprintf("SELECT * FROM %s", type))
-      make_variant_table_at_level(data, level = "genes")
+      from_bfc(sprintf("%s_tables::%s", cached, type))
     }
 
     chosen_row <- reactive({
