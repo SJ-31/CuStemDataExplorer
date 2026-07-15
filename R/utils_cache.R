@@ -15,6 +15,15 @@ cache_pca <- function(key, cache, cache_key, remove = TRUE) {
   )
 }
 
+#' Remove cached items with a regexp
+#' @export
+remove_cached <- function(regexp) {
+  bfc <- BiocFileCache::BiocFileCache(get_golem_config("cache"))
+  lookup <- BiocFileCache::bfcquery(bfc, regexp)
+  print(glue::glue("Removing `{lookup$rname}`"))
+  BiocFileCache::bfcremove(bfc, lookup$rid)
+}
+
 #' List of objects to cache and how
 #'
 #' @description

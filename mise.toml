@@ -14,6 +14,15 @@ fi
 Rscript -e 'golem::run_dev()'
 """
 
+[tasks.remove_cached]
+env = { GOLEM_CONFIG_ACTIVE = "dev" }
+usage = '''
+arg "<regexp>" help="Regexp to search with in bfcquery"
+'''
+run = """
+Rscript -e \"devtools::load_all(); remove_cached('${usage_regexp}')\"
+""""
+
 [tasks.record_session]
 run = """
 #!/usr/bin/env Rscript
