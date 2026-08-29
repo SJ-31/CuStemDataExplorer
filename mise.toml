@@ -164,3 +164,13 @@ python inst/get_sample_catalog.py -i files.txt \
        -o inst/tmp/sample_catalog.csv
 rm files.txt
 '''
+
+[tasks.test_parse_sample_sheet]
+run = '''
+if [[ ! -e tests/files.txt ]]; then
+   rsync stem_cell_admin@10.39.181.155:~/files.txt tests/
+fi
+python inst/get_sample_catalog.py -i tests/files.txt \
+       -r /volume1/cancer_ngs \
+       -o tests/sample_catalog.csv
+'''
